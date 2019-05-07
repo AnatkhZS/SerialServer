@@ -56,7 +56,6 @@ public class LogRecorder {
 				while(!isStop) {
 					String line = serialHandler.readLine(1);
 					if(line!=null) {
-						System.out.println(line);
 						writer.write(line);
 						writer.flush();
 					}
