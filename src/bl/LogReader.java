@@ -2,8 +2,8 @@ package bl;
 
 public class LogReader extends Reader{
 
-	public LogReader(int type) {
-		super(type);
+	public LogReader() {
+		super(1);
 		// TODO Auto-generated constructor stub
 	}
 

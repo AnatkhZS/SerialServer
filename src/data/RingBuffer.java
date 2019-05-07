@@ -20,8 +20,8 @@ public class RingBuffer<T> {
 	}
 	
 	public void put(T t){
+		if(isFull()) tail = head;
 		buffer[tail] = t;
-		if(isFull()) head = (head+1) % bufferSize;
 		tail = (tail+1) % bufferSize;
 	}
 	
