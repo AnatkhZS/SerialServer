@@ -13,6 +13,9 @@ import javax.swing.*;
 import bl.LogRecorder;
 import bl.SerialServer;
 import data.SerialHandler;
+import zht.tab.Tab;
+import zht.tab.ZHTChromeTabbedPane;
+import zht.tab.ZHTTabbedPane;
 
 public class GUI {
 	private JTextArea showTextArea;
@@ -56,7 +59,7 @@ public class GUI {
 		showTextArea = new JTextArea();
 		showTextArea.setLineWrap(true);
 		showTextArea.setEditable(false);
-		JTabbedPane tabPane = new JTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
+		ZHTTabbedPane tabPane = new ZHTChromeTabbedPane();
 		
 		
 		JScrollPane showScrollPane = new JScrollPane(showTextArea);
@@ -123,8 +126,11 @@ public class GUI {
 		});
 		JScrollPane inputScrollPane = new JScrollPane(inputTextArea);
 		
-		tabPane.addTab("Test0", showScrollPane);
-		tabPane.addTab("Test1", new JPanel());
+		Tab tab = new Tab(showScrollPane, true, null, "Test0");
+		tabPane.addTab(tab);
+		Tab tab1 = new Tab(new JPanel(), true, null, "Test1");
+		tabPane.addTab(tab1);
+		//tabPane.addTab("Test1", new JPanel());
 		JPanel wtfPane = new JPanel();
 		wtfPane.setLayout(new BorderLayout());
 		wtfPane.add(tabPane, BorderLayout.CENTER);
@@ -135,6 +141,37 @@ public class GUI {
 		GridLayout toolBoxGrid = new GridLayout(1, 6);
 		toolBoxPanel.setLayout(toolBoxGrid);
 		JButton connectButton = new JButton("Connect");
+		connectButton.addMouseListener(new MouseListener() {
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				// TODO Auto-generated method stub
+				establishConnection();
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}});
 		JButton reConnectButton = new JButton("Reconnect");
 		JButton disConnectButton = new JButton("Disconnect");
 		JButton optonsButton = new JButton("Optons");
@@ -154,6 +191,29 @@ public class GUI {
 		
 		splitPane.setDividerLocation(0.7);
 		mainPane.setDividerLocation(0.1);
+	}
+	
+	private void establishConnection() {
+		JFrame connectFrme = new JFrame();
+		JPanel panel = new JPanel();
+		panel.setLayout(new GridLayout(4,2));
+		JLabel portLabel = new JLabel("Port:");
+		JLabel buadrateLabel = new JLabel("Buadrate:");
+		JLabel logLabel = new JLabel("Log:");
+		JComboBox portBox = new JComboBox();
+		JComboBox buadrateBox = new JComboBox();
+		JTextField logPathField = new JTextField();
+		
+		panel.add(portLabel);
+		panel.add(portBox);
+		panel.add(buadrateLabel);
+		panel.add(buadrateBox);
+		panel.add(logLabel);
+		panel.add(logPathField);
+		
+		connectFrme.setSize(200,300);
+		connectFrme.add(panel);
+		connectFrme.setVisible(true);
 	}
 	
 	private class GUICreator implements Runnable{
