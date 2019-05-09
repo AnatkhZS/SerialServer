@@ -1,6 +1,8 @@
 package ui;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -24,28 +26,28 @@ public class GUI {
 	
 	private void run() {
 		
-		SerialHandler sh = new SerialHandler("cu.SLAB_USBtoUART", 115200);
-		currentSerialHandler = sh;
+//		SerialHandler sh = new SerialHandler("cu.SLAB_USBtoUART", 115200);
+//		currentSerialHandler = sh;
 		GUICreator c = new GUICreator();
 		Thread guiThread = new Thread(c);
 		guiThread.start();
-		try {
-			Thread.sleep(5000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		LogRecorder lr = new LogRecorder(sh, "/Users/zhusong/Documents/code/log.txt", true, true);
-		lr.startRecord();
-		SerialServer server = new SerialServer(sh);
-		server.createServer();
-		DisplayLog dl = new DisplayLog(sh);
-		Thread displayThread = new Thread(dl);
-		displayThread.start();
+//		try {
+//			Thread.sleep(5000);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		LogRecorder lr = new LogRecorder(sh, "/Users/zhusong/Documents/code/log.txt", true, true);
+//		lr.startRecord();
+//		SerialServer server = new SerialServer(sh);
+//		server.createServer();
+//		DisplayLog dl = new DisplayLog(sh);
+//		Thread displayThread = new Thread(dl);
+//		displayThread.start();
 	}
 	
 	private void createGUI() {
-		JFrame.setDefaultLookAndFeelDecorated(true);
+		//JFrame.setDefaultLookAndFeelDecorated(true);
 		JFrame frame = new JFrame("SerialServer");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setSize(900, 600);
@@ -54,6 +56,9 @@ public class GUI {
 		showTextArea = new JTextArea();
 		showTextArea.setLineWrap(true);
 		showTextArea.setEditable(false);
+		JTabbedPane tabPane = new JTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
+		
+		
 		JScrollPane showScrollPane = new JScrollPane(showTextArea);
 		JScrollBar scrollBar = showScrollPane.getVerticalScrollBar();
 		scrollBar.addMouseListener(new MouseListener() {
@@ -118,15 +123,37 @@ public class GUI {
 		});
 		JScrollPane inputScrollPane = new JScrollPane(inputTextArea);
 		
-		JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, showScrollPane, inputScrollPane);
+		tabPane.addTab("Test0", showScrollPane);
+		tabPane.addTab("Test1", new JPanel());
+		JPanel wtfPane = new JPanel();
+		wtfPane.setLayout(new BorderLayout());
+		wtfPane.add(tabPane, BorderLayout.CENTER);
+		JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, wtfPane, inputScrollPane);
 		splitPane.setDividerSize(3);
 		
+		JPanel toolBoxPanel = new JPanel();
+		GridLayout toolBoxGrid = new GridLayout(1, 6);
+		toolBoxPanel.setLayout(toolBoxGrid);
+		JButton connectButton = new JButton("Connect");
+		JButton reConnectButton = new JButton("Reconnect");
+		JButton disConnectButton = new JButton("Disconnect");
+		JButton optonsButton = new JButton("Optons");
+		toolBoxPanel.add(connectButton);
+		toolBoxPanel.add(reConnectButton);
+		toolBoxPanel.add(disConnectButton);
+		toolBoxPanel.add(optonsButton);
+		
+		JSplitPane mainPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, toolBoxPanel, splitPane);
+		mainPane.setDividerSize(3);
+		
 		panel.setLayout(new BorderLayout());
-		panel.add(splitPane);
+		panel.add(mainPane);
 		
 		frame.add(panel);
 		frame.setVisible(true);
+		
 		splitPane.setDividerLocation(0.7);
+		mainPane.setDividerLocation(0.1);
 	}
 	
 	private class GUICreator implements Runnable{
