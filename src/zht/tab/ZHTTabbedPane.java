@@ -29,8 +29,10 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -39,6 +41,8 @@ import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import ui.MyHandler;
+import ui.RemoveTabEvent;
 import zht.about.AboutDialog;
 import zht.tab.interaction.DefaultInputHanlder;
 import zht.tab.interaction.MoveInputHanlder;

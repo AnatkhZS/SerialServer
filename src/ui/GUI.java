@@ -2,11 +2,18 @@ package ui;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.FileDialog;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.swing.*;
 
@@ -22,6 +29,14 @@ public class GUI {
 	private JTextArea inputTextArea;
 	private SerialHandler currentSerialHandler;
 	private boolean isScrollBarClicked = false;
+	private JTextField logPathField;
+	private ZHTTabbedPane tabPane;
+	
+	private String serialPort;
+	private int buadrate;
+	private String logPath;
+	
+	private Map<String, SerialHandler> serialMap = new HashMap<String, SerialHandler>();
 	
 	public static void main(String args[]) {
 		new GUI().run();
@@ -59,42 +74,7 @@ public class GUI {
 		showTextArea = new JTextArea();
 		showTextArea.setLineWrap(true);
 		showTextArea.setEditable(false);
-		ZHTTabbedPane tabPane = new ZHTChromeTabbedPane();
-		
-		
-		JScrollPane showScrollPane = new JScrollPane(showTextArea);
-		JScrollBar scrollBar = showScrollPane.getVerticalScrollBar();
-		scrollBar.addMouseListener(new MouseListener() {
-
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				// TODO Auto-generated method stub
-		
-			}
-
-			@Override
-			public void mousePressed(MouseEvent e) {
-				// TODO Auto-generated method stub
-				isScrollBarClicked = true;
-			}
-
-			@Override
-			public void mouseReleased(MouseEvent e) {
-				// TODO Auto-generated method stub
-				isScrollBarClicked = false;
-			}
-
-			@Override
-			public void mouseEntered(MouseEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e) {
-				// TODO Auto-generated method stub
-				
-			}});
+		tabPane = new ZHTChromeTabbedPane();
 		
 		inputTextArea = new JTextArea();
 		inputTextArea.setLineWrap(true);
@@ -126,10 +106,7 @@ public class GUI {
 		});
 		JScrollPane inputScrollPane = new JScrollPane(inputTextArea);
 		
-		Tab tab = new Tab(showScrollPane, true, null, "Test0");
-		tabPane.addTab(tab);
-		Tab tab1 = new Tab(new JPanel(), true, null, "Test1");
-		tabPane.addTab(tab1);
+		
 		//tabPane.addTab("Test1", new JPanel());
 		JPanel wtfPane = new JPanel();
 		wtfPane.setLayout(new BorderLayout());
@@ -146,7 +123,7 @@ public class GUI {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				// TODO Auto-generated method stub
-				establishConnection();
+				createConnectionFrame();
 			}
 
 			@Override
@@ -193,27 +170,176 @@ public class GUI {
 		mainPane.setDividerLocation(0.1);
 	}
 	
-	private void establishConnection() {
-		JFrame connectFrme = new JFrame();
-		JPanel panel = new JPanel();
-		panel.setLayout(new GridLayout(4,2));
+	private void createConnectionFrame() {
+		JFrame connectionFrame = new JFrame("Options");
+		connectionFrame.setSize(400,300);
+		connectionFrame.setVisible(true);
+		connectionFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		GridBagLayout gridBagLayout = new GridBagLayout();
+		connectionFrame.setLayout(gridBagLayout);
+		
+		GridBagConstraints gridBagConstraints = new GridBagConstraints();
+		gridBagConstraints.fill=GridBagConstraints.BOTH;
+		
 		JLabel portLabel = new JLabel("Port:");
 		JLabel buadrateLabel = new JLabel("Buadrate:");
 		JLabel logLabel = new JLabel("Log:");
-		JComboBox portBox = new JComboBox();
-		JComboBox buadrateBox = new JComboBox();
-		JTextField logPathField = new JTextField();
+		String[] serialPortList = {"cu.SLAB_USBtoUART"};
+		JComboBox<String> portBox = new JComboBox<String>(serialPortList);
+		Integer[] buadrateList = {57600, 115200};
+		JComboBox<Integer> buadrateBox = new JComboBox<Integer>(buadrateList);
+		logPathField = new JTextField();
+		JButton openFileButton = new JButton("..");
+		JButton cancelButton = new JButton("Cancel");
+		cancelButton.addMouseListener(new MouseListener() {
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				// TODO Auto-generated method stub
+				connectionFrame.dispose();
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}});
 		
-		panel.add(portLabel);
-		panel.add(portBox);
-		panel.add(buadrateLabel);
-		panel.add(buadrateBox);
-		panel.add(logLabel);
-		panel.add(logPathField);
+		JButton confirmButton = new JButton("Confirm");
+		confirmButton.addMouseListener(new MouseListener() {
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				// TODO Auto-generated method stub
+				serialPort = (String) portBox.getSelectedItem();
+				buadrate = (int) buadrateBox.getSelectedItem();
+				logPath = logPathField.getText();
+				connectionFrame.dispose();
+				new Thread(new SessionCreator(serialPort, buadrate, logPath)).start();
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}});
 		
-		connectFrme.setSize(200,300);
-		connectFrme.add(panel);
-		connectFrme.setVisible(true);
+		gridBagConstraints.gridx=0;
+        gridBagConstraints.gridy=0;
+        gridBagConstraints.gridwidth=1;                                             
+        gridBagConstraints.gridheight=1;            
+        gridBagLayout.setConstraints(portLabel, gridBagConstraints);
+        
+        gridBagConstraints.gridx=1;
+        gridBagConstraints.gridy=0;
+        gridBagConstraints.gridwidth=6;                                             
+        gridBagConstraints.gridheight=1;            
+        gridBagLayout.setConstraints(portBox, gridBagConstraints);
+        
+        gridBagConstraints.gridx=0;
+        gridBagConstraints.gridy=1;
+        gridBagConstraints.gridwidth=1;                                             
+        gridBagConstraints.gridheight=1;            
+        gridBagLayout.setConstraints(buadrateLabel, gridBagConstraints);
+        
+        gridBagConstraints.gridx=1;
+        gridBagConstraints.gridy=1;
+        gridBagConstraints.gridwidth=6;                                             
+        gridBagConstraints.gridheight=1;            
+        gridBagLayout.setConstraints(buadrateBox, gridBagConstraints);
+        
+        gridBagConstraints.gridx=0;
+        gridBagConstraints.gridy=2;
+        gridBagConstraints.gridwidth=1;                                             
+        gridBagConstraints.gridheight=1;            
+        gridBagLayout.setConstraints(logLabel, gridBagConstraints);
+        
+        gridBagConstraints.gridx=1;
+        gridBagConstraints.gridy=2;
+        gridBagConstraints.gridwidth=6;                                             
+        gridBagConstraints.gridheight=1;            
+        gridBagLayout.setConstraints(logPathField, gridBagConstraints);
+        
+        gridBagConstraints.gridx=7;
+        gridBagConstraints.gridy=2;
+        gridBagConstraints.gridwidth=1;                                             
+        gridBagConstraints.gridheight=1;            
+        gridBagLayout.setConstraints(openFileButton, gridBagConstraints);
+        
+        gridBagConstraints.gridx=5;
+        gridBagConstraints.gridy=3;
+        gridBagConstraints.gridwidth=1;                                             
+        gridBagConstraints.gridheight=1;            
+        gridBagLayout.setConstraints(cancelButton, gridBagConstraints);
+        
+        gridBagConstraints.gridx=6;
+        gridBagConstraints.gridy=3;
+        gridBagConstraints.gridwidth=1;                                             
+        gridBagConstraints.gridheight=1;            
+        gridBagLayout.setConstraints(confirmButton, gridBagConstraints);
+        
+        
+        connectionFrame.add(portLabel);
+        connectionFrame.add(portBox);
+        connectionFrame.add(buadrateLabel);
+        connectionFrame.add(buadrateBox);
+        connectionFrame.add(logLabel);
+        connectionFrame.add(logPathField);
+        connectionFrame.add(openFileButton);
+        connectionFrame.add(cancelButton);
+        connectionFrame.add(confirmButton);
+		
+		openFileButton.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				FileDialog fileDialog = new FileDialog(connectionFrame);                 
+				fileDialog.setVisible(true);
+				String filePath = fileDialog.getDirectory();		
+				String fileName = fileDialog.getFile();		
+				if(filePath == null  || fileName == null){			
+				}else{
+					logPathField.setText(filePath + fileName);
+				}
+			}});
 	}
 	
 	private class GUICreator implements Runnable{
@@ -253,4 +379,76 @@ public class GUI {
 		}
 		
 	}
+	
+	private class SessionCreator implements Runnable{
+		private String serialPort;
+		private int buadrate;
+		private String logPath;
+		
+		public SessionCreator(String serialPort, int buadrate, String logPath) {
+			this.serialPort = serialPort;
+			this.buadrate = buadrate;
+			this.logPath = logPath;
+		}
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			SerialHandler sh = new SerialHandler(serialPort, buadrate);
+			serialMap.put(serialPort, sh);
+			currentSerialHandler = sh;
+			
+			JScrollPane showScrollPane = new JScrollPane(showTextArea);
+			JScrollBar scrollBar = showScrollPane.getVerticalScrollBar();
+			scrollBar.addMouseListener(new MouseListener() {
+
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					// TODO Auto-generated method stub
+			
+				}
+
+				@Override
+				public void mousePressed(MouseEvent e) {
+					// TODO Auto-generated method stub
+					isScrollBarClicked = true;
+				}
+
+				@Override
+				public void mouseReleased(MouseEvent e) {
+					// TODO Auto-generated method stub
+					isScrollBarClicked = false;
+				}
+
+				@Override
+				public void mouseEntered(MouseEvent e) {
+					// TODO Auto-generated method stub
+					
+				}
+
+				@Override
+				public void mouseExited(MouseEvent e) {
+					// TODO Auto-generated method stub
+					
+				}});
+			
+			Tab tab = new Tab(showScrollPane, true, null, serialPort);
+			tab.addListener(new MyHandler() {
+
+				@Override
+				public void doHandler(RemoveTabEvent e) {
+					// TODO Auto-generated method stub
+					String seriapPort = e.getTabName();
+					SerialHandler toDelete = serialMap.get(seriapPort);
+					//shutdown
+					//serialMap.remove(seriapPort);
+				}});
+			tabPane.addTab(tab);
+			DisplayLog dl = new DisplayLog(sh);
+			new Thread(dl).start();
+		}
+		
+	}
+	
+	
 }
