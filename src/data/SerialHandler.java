@@ -9,6 +9,7 @@ public class SerialHandler {
 	private RingBuffer<String> serverBuffer;
 	private RingBuffer<Character> writeBuffer;
 	private SerialOpener serial;
+	private boolean isStop = false;
 	
 	public SerialHandler(String serialName, int buadrate){
 		this.readBuffer = new RingBuffer<byte[]>(readBufferSize);
@@ -18,6 +19,14 @@ public class SerialHandler {
 		this.writeBuffer = new RingBuffer<Character>(writeBufferSize);
 		this.serial=new SerialOpener(serialName, buadrate);
 		initial();
+	}
+	
+	public boolean isStop() {
+		return isStop;
+	}
+	
+	public void setStop() {
+		this.isStop = true;
 	}
 	
 	private void initial(){
@@ -54,7 +63,7 @@ public class SerialHandler {
 
 		@Override
 		public void run() {
-			while(true) {
+			while(!isStop) {
 				byte[] result=serial.read();
 				if(result != null) {
 					readBuffer.put(result);
@@ -69,7 +78,7 @@ public class SerialHandler {
 
 		@Override
 		public void run() {
-			while(true) {
+			while(!isStop) {
 				byte[] content;
 				if((content=readBuffer.get())!=null) {
 					String line = rim(content);
@@ -99,7 +108,7 @@ public class SerialHandler {
 		public void run() {
 			char[] charList = new char[1024];
 			int i=0;
-			while(true) {
+			while(!isStop) {
 				Character c;
 				if((c=writeBuffer.get())!=null) {
 					//handle \t etc..

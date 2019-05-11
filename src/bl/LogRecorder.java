@@ -53,7 +53,7 @@ public class LogRecorder {
 			File logFile = fileInit(fileName);
 			try {
 				FileWriter writer = new FileWriter(logFile, true);
-				while(!isStop) {
+				while(!serialHandler.isStop()) {
 					String line = serialHandler.readLine(1);
 					if(line!=null) {
 						writer.write(line);

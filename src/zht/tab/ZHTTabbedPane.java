@@ -105,6 +105,10 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 		this.setFocusable(true);
 		this.setToolTipText("");
 	}
+	
+	public int detect() {
+		return tabViewMap.size();
+	}
 
 	protected void installInteractionListener() {
 		addInteractionListener(new DefaultInputHanlder(this));
@@ -186,9 +190,11 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 
 	public void closeTab(int index) {
 		closeTab((Tab) tabList.get(index));
+		System.out.println("Close Tab index");
 	}
 
 	public void closeTab(Tab tab) {
+		tab.trigger(new RemoveTabEvent(this, tab.getTitle()));
 		if (tab.isCloseAble()) {
 			int index = tabList.indexOf(tab);
 			tabViewMap.remove(tab);
@@ -202,6 +208,7 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 			this.invalidateTab();
 			this.validateTab();
 		}
+		System.out.println("Close Tab tab");
 	}
 
 	public void setMouseOverCloseTab(Tab tab) {
@@ -279,6 +286,7 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 	protected void paintTab(Graphics2D g, Tab tab) {
 		Graphics2D g2d = (Graphics2D) g.create();
 		g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		System.out.println("Painting tab, size:"+detect());
 		TabView view = (TabView) tabViewMap.get(tab);
 		Color color = tabFillColor;
 		Color gradientColor = tabGradientColor;
@@ -497,7 +505,7 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 	protected abstract Shape createTabShape(Rectangle2D bounds);
 
 	public void addTab(Tab tab) {
-		this.addTab(tab, false);
+		this.addTab(tab, true);
 	}
 
 	public void addTab(Tab tab, boolean selected) {
@@ -520,7 +528,9 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 	public void removeTab(Tab tab) {
 		if (tabList.contains(tab)) {
 			removeTab(tabList.indexOf(tab));
+			System.out.println("Removed");
 		}
+		System.out.println("Remove Tab tab");
 	}
 
 	public void removeTab(int index) {
@@ -537,6 +547,7 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 			}
 			this.invalidateTab();
 		}
+		System.out.println("Remove Tab index");
 	}
 
 	public void moveTab(Tab tab, int index) {

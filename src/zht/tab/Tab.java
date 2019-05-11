@@ -78,4 +78,8 @@ public class Tab {
 	public String getTitle() {
 		return title;
 	}
+	
+	public void destroy() {
+		
+	}
 }

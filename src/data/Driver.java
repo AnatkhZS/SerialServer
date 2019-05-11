@@ -1,37 +1,18 @@
 package data;
 
+import bl.LogRecorder;
+
 public class Driver {
-	private static RingBuffer<Integer> buffer;
-	public static void main(String args[]){
-//		new Driver().runThread();
-	}
-	
-	public void runThread() {
-		Feed feed=new Feed();
-		Fetch fetch=new Fetch();
-		Thread feedThread=new Thread(feed);
-		Thread fetchThread=new Thread(fetch);
-		fetchThread.start();
-		feedThread.start();
-	}
-	
-	private class Feed implements Runnable{
-
-		@Override
-		public void run() {
-			// TODO Auto-generated method stub
-
+	public static void main(String args[]) {
+		SerialHandler sh = new SerialHandler("cu.SLAB_USBtoUART", 115200);
+		LogRecorder lr = new LogRecorder(sh, "/Users/zhusong/Documents/code/log.txt", true, true);
+		lr.startRecord();
+		try {
+			Thread.sleep(30000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		
-	}
-	
-	private class Fetch implements Runnable{
-
-		@Override
-		public void run() {
-			// TODO Auto-generated method stub
-
-		}
-		
+		sh.setStop();
 	}
 }

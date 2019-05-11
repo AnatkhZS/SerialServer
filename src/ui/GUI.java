@@ -107,7 +107,8 @@ public class GUI {
 		JScrollPane inputScrollPane = new JScrollPane(inputTextArea);
 		
 		
-		//tabPane.addTab("Test1", new JPanel());
+//		Tab tab = new Tab(new JPanel(), true, null, "1");
+//		tabPane.addTab(tab);
 		JPanel wtfPane = new JPanel();
 		wtfPane.setLayout(new BorderLayout());
 		wtfPane.add(tabPane, BorderLayout.CENTER);
@@ -151,7 +152,7 @@ public class GUI {
 			}});
 		JButton reConnectButton = new JButton("Reconnect");
 		JButton disConnectButton = new JButton("Disconnect");
-		JButton optonsButton = new JButton("Optons");
+		JButton optonsButton = new JButton("Options");
 		toolBoxPanel.add(connectButton);
 		toolBoxPanel.add(reConnectButton);
 		toolBoxPanel.add(disConnectButton);
@@ -362,7 +363,7 @@ public class GUI {
 		@Override
 		public void run() {
 			// TODO Auto-generated method stub
-			while(true) {
+			while(!sh.isStop()) {
 				String line = sh.readLine(0);
 				if(line!=null) {
 					showTextArea.append(line);
@@ -398,9 +399,11 @@ public class GUI {
 			serialMap.put(serialPort, sh);
 			currentSerialHandler = sh;
 			
+			JScrollPane[] toDeleteArray = new JScrollPane[1];
 			JScrollPane showScrollPane = new JScrollPane(showTextArea);
+			toDeleteArray[0] = showScrollPane;
 			JScrollBar scrollBar = showScrollPane.getVerticalScrollBar();
-			scrollBar.addMouseListener(new MouseListener() {
+			scrollBar.addMouseListener(new MouseListener() { 
 
 				@Override
 				public void mouseClicked(MouseEvent e) {
@@ -438,10 +441,20 @@ public class GUI {
 				@Override
 				public void doHandler(RemoveTabEvent e) {
 					// TODO Auto-generated method stub
-					String seriapPort = e.getTabName();
-					SerialHandler toDelete = serialMap.get(seriapPort);
+					String serialPort = e.getTabName();
+					SerialHandler toDelete = serialMap.get(serialPort);
+					toDelete.setStop();
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					toDeleteArray[0].setVisible(false);
+					toDeleteArray[0] = null;
+					tabPane.removeTab(tab);
 					//shutdown
-					//serialMap.remove(seriapPort);
+					serialMap.remove(serialPort);
 				}});
 			tabPane.addTab(tab);
 			DisplayLog dl = new DisplayLog(sh);
