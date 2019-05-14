@@ -9,6 +9,8 @@ public class SerialHandler {
 	private RingBuffer<String> serverBuffer;
 	private RingBuffer<Character> writeBuffer;
 	private SerialOpener serial;
+	private String serialName;
+	private int buadrate;
 	private boolean isStop = false;
 	
 	public SerialHandler(String serialName, int buadrate){
@@ -17,8 +19,13 @@ public class SerialHandler {
 		this.logBuffer = new RingBuffer<String>(readBufferSize);
 		this.serverBuffer = new RingBuffer<String>(readBufferSize);
 		this.writeBuffer = new RingBuffer<Character>(writeBufferSize);
-		this.serial=new SerialOpener(serialName, buadrate);
+		this.serialName = serialName;
+		this.buadrate = buadrate;
 		initial();
+	}
+	
+	public String getSerialName() {
+		return this.serialName;
 	}
 	
 	public boolean isStop() {
@@ -30,15 +37,32 @@ public class SerialHandler {
 	}
 	
 	private void initial(){
+		try {
+			this.serial=new SerialOpener(serialName, buadrate);
+		}catch(SerialException e) {
+			String warning = "Unable to open serial port "+serialName+":\r\n" + "  Resource busy";
+			displayBuffer.put(warning);
+			logBuffer.put(warning);
+			serverBuffer.put(warning);
+			return;
+		}
+		
+		this.isStop = false;
 		Fetch fetch = new Fetch();
 		Thread fetchThread = new Thread(fetch);
 		Feed feed = new Feed();
 		Thread feedThread = new Thread(feed);
 		WriteCMD writeCmd = new WriteCMD();
 		Thread writeCmdThread = new Thread(writeCmd);
+		Thread destroyThread = new Thread(new Destroy());
 		fetchThread.start();
 		feedThread.start();
 		writeCmdThread.start();
+		destroyThread.start();
+	}
+	
+	public void reconnect() {
+		initial();
 	}
 	
 	public String readLine(int type){
@@ -128,7 +152,21 @@ public class SerialHandler {
 				}
 			}
 		}
-		
 	}
 	
+	private class Destroy implements Runnable{
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			while(!isStop) {
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			serial.close();
+		}
+	}
 }

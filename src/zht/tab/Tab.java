@@ -40,7 +40,7 @@ public class Tab {
 	protected void notifies(RemoveTabEvent e) {
 		if(eventListeners.size()>0){
 			for(MyHandler h:eventListeners)
-				h.doHandler(e);
+				h.removeTab(e);
 		}
 	}
 

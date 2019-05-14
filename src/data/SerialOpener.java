@@ -6,10 +6,14 @@ public class SerialOpener {
 	private String serialName;
 	private SerialPort ser;
 	
-	public SerialOpener(String serialName, int buadrate) {
+	public SerialOpener(String serialName, int buadrate) throws SerialException {
 		this.buadrate = buadrate;
 		this.serialName = serialName;
 		this.ser = SerialPort.getCommPort(serialName);
+		if(ser.isOpen()) {
+			System.out.println("Serial opened");
+			throw new SerialException();
+		}
 		this.ser.openPort();
 		this.ser.setComPortTimeouts(SerialPort.TIMEOUT_READ_BLOCKING, 100, 0);
 		this.ser.setBaudRate(buadrate);

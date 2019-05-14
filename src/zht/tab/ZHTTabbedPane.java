@@ -43,6 +43,7 @@ import javax.swing.SwingUtilities;
 
 import ui.MyHandler;
 import ui.RemoveTabEvent;
+import ui.SelectTabEvent;
 import zht.about.AboutDialog;
 import zht.tab.interaction.DefaultInputHanlder;
 import zht.tab.interaction.MoveInputHanlder;
@@ -95,6 +96,8 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 
 	private Image backgroundImage;
 	private TexturePaint backgroundPaint;
+	
+	private Set<MyHandler> eventListeners = new LinkedHashSet<MyHandler>();
 
 	public ZHTTabbedPane() {
 		closeIcon = new ImageIcon(this.getClass().getResource("close.png"));
@@ -104,6 +107,26 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 		installListener();
 		this.setFocusable(true);
 		this.setToolTipText("");
+	}
+
+	public void addListener(MyHandler h) {
+		this.eventListeners.add(h);
+	}
+	
+	public void removeListener(MyHandler h) {
+		this.eventListeners.remove(h);
+	}
+	
+	public void trigger(SelectTabEvent e) {
+		if(eventListeners == null) return;
+		notifies(e);
+	}
+	
+	protected void notifies(SelectTabEvent e) {
+		if(eventListeners.size()>0){
+			for(MyHandler h:eventListeners)
+				h.selectTab(e);
+		}
 	}
 	
 	public int detect() {
@@ -190,7 +213,6 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 
 	public void closeTab(int index) {
 		closeTab((Tab) tabList.get(index));
-		System.out.println("Close Tab index");
 	}
 
 	public void closeTab(Tab tab) {
@@ -208,7 +230,6 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 			this.invalidateTab();
 			this.validateTab();
 		}
-		System.out.println("Close Tab tab");
 	}
 
 	public void setMouseOverCloseTab(Tab tab) {
@@ -286,7 +307,6 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 	protected void paintTab(Graphics2D g, Tab tab) {
 		Graphics2D g2d = (Graphics2D) g.create();
 		g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		System.out.println("Painting tab, size:"+detect());
 		TabView view = (TabView) tabViewMap.get(tab);
 		Color color = tabFillColor;
 		Color gradientColor = tabGradientColor;
@@ -528,9 +548,7 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 	public void removeTab(Tab tab) {
 		if (tabList.contains(tab)) {
 			removeTab(tabList.indexOf(tab));
-			System.out.println("Removed");
 		}
-		System.out.println("Remove Tab tab");
 	}
 
 	public void removeTab(int index) {
@@ -547,7 +565,6 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 			}
 			this.invalidateTab();
 		}
-		System.out.println("Remove Tab index");
 	}
 
 	public void moveTab(Tab tab, int index) {
@@ -572,6 +589,7 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 			return;
 		}
 		if (this.selectedTab != tab) {
+			this.trigger(new SelectTabEvent(this, tab.getTitle()));
 			this.selectedTab = tab;
 			this.contentPanel.removeAll();
 			this.contentPanel.add(tab.getComponent(), BorderLayout.CENTER);
