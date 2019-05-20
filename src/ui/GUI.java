@@ -3,6 +3,7 @@ package ui;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.FileDialog;
+import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -205,24 +206,127 @@ public class GUI {
 		JFrame connectionFrame = new JFrame("Options");
 		connectionFrame.setSize(400,300);
 		connectionFrame.setVisible(true);
-		connectionFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//		connectionFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		connectionFrame.setLocationRelativeTo(null);
+		connectionFrame.setLayout(new VFlowLayout());
+
+		JPanel serialSettingPanel = new JPanel();
+		serialSettingPanel.setBorder(BorderFactory.createTitledBorder("Serial Setting"));
+		GridBagLayout serialSettingLayout = new GridBagLayout();
+		GridBagConstraints serialSettingConstraints = new GridBagConstraints();
+		serialSettingConstraints.fill=GridBagConstraints.BOTH;
+		serialSettingPanel.setLayout(serialSettingLayout);
+		JComboBox<String> portBox;
+		JComboBox<Integer> buadrateBox;
+		{
+			JLabel portLabel = new JLabel("Port:");
+			serialSettingConstraints.gridx=0;
+	        serialSettingConstraints.gridy=0;
+	        serialSettingConstraints.gridwidth=2;                                             
+	        serialSettingConstraints.gridheight=1;            
+	        serialSettingLayout.setConstraints(portLabel, serialSettingConstraints);
+	        serialSettingPanel.add(portLabel);
+		}
+		{
+			String[] serialPortList = getSerialPortList();
+			portBox = new JComboBox<String>(serialPortList);
+			serialSettingConstraints.gridx=2;
+	        serialSettingConstraints.gridy=0;
+	        serialSettingConstraints.gridwidth=12;                                             
+	        serialSettingConstraints.gridheight=1;            
+	        serialSettingLayout.setConstraints(portBox, serialSettingConstraints);
+	        serialSettingPanel.add(portBox);
+		}
+		{
+			JLabel buadrateLabel = new JLabel("Buadrate:");
+			serialSettingConstraints.gridx=0;
+	        serialSettingConstraints.gridy=1;
+	        serialSettingConstraints.gridwidth=2;                                             
+	        serialSettingConstraints.gridheight=1;            
+	        serialSettingLayout.setConstraints(buadrateLabel, serialSettingConstraints);
+	        serialSettingPanel.add(buadrateLabel);
+		}
+		{
+			Integer[] buadrateList = {57600, 115200};
+			buadrateBox = new JComboBox<Integer>(buadrateList);
+			serialSettingConstraints.gridx=2;
+	        serialSettingConstraints.gridy=1;
+	        serialSettingConstraints.gridwidth=12;                                             
+	        serialSettingConstraints.gridheight=1;            
+	        serialSettingLayout.setConstraints(buadrateBox, serialSettingConstraints);
+	        serialSettingPanel.add(buadrateBox);
+		}
+
+		JPanel logSettingPanel = new JPanel();
+		logSettingPanel.setBorder(BorderFactory.createTitledBorder("Log Setting"));
+		GridBagLayout logSettingLayout = new GridBagLayout();
+		GridBagConstraints logSettingConstraints = new GridBagConstraints();
+		logSettingConstraints.fill=GridBagConstraints.BOTH;
+		logSettingPanel.setLayout(logSettingLayout);
+		{
+			JCheckBox recordBox = new JCheckBox("record");
+			logSettingConstraints.gridx=0;
+			logSettingConstraints.gridy=0;
+			logSettingConstraints.gridwidth=1;                                             
+			logSettingConstraints.gridheight=1;            
+			logSettingLayout.setConstraints(recordBox, logSettingConstraints);
+			logSettingPanel.add(recordBox);
+		}
+		{
+			JLabel nullPanel = new JLabel();
+			logSettingConstraints.gridx=1;
+			logSettingConstraints.gridy=0;
+			logSettingConstraints.gridwidth=10;                                             
+			logSettingConstraints.gridheight=1;            
+			logSettingLayout.setConstraints(nullPanel, logSettingConstraints);
+			logSettingPanel.add(nullPanel);
+		}
+		{
+			JLabel logLabel = new JLabel("Log:");
+			logSettingConstraints.gridx=0;
+			logSettingConstraints.gridy=1;
+			logSettingConstraints.gridwidth=2;                                             
+			logSettingConstraints.gridheight=1;    
+			logSettingLayout.setConstraints(logLabel, logSettingConstraints);
+			logSettingPanel.add(logLabel);
+		}
+		{
+			logPathField = new JTextField();
+			logSettingConstraints.gridx=2;
+			logSettingConstraints.gridy=1;
+			logSettingConstraints.gridwidth=8;                                             
+			logSettingConstraints.gridheight=1; 
+			logSettingConstraints.weightx=100;
+			logSettingConstraints.weighty=100;
+			logSettingLayout.setConstraints(logPathField, logSettingConstraints);
+			logSettingPanel.add(logPathField);
+		}
+		{
+			JButton openFileButton = new JButton("..");
+			openFileButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					// TODO Auto-generated method stub
+					FileDialog fileDialog = new FileDialog(connectionFrame);                 
+					fileDialog.setVisible(true);
+					String filePath = fileDialog.getDirectory();		
+					String fileName = fileDialog.getFile();		
+					if(filePath == null  || fileName == null){			
+					}else{
+						logPathField.setText(filePath + fileName);
+					}
+				}});
+			
+			logSettingConstraints.gridx=10;
+			logSettingConstraints.gridy=1;
+			logSettingConstraints.gridwidth=1;                                             
+			logSettingConstraints.gridheight=1;            
+			logSettingLayout.setConstraints(openFileButton, logSettingConstraints);
+			logSettingPanel.add(openFileButton);
+		}
 		
-		GridBagLayout gridBagLayout = new GridBagLayout();
-		connectionFrame.setLayout(gridBagLayout);
 		
-		GridBagConstraints gridBagConstraints = new GridBagConstraints();
-		gridBagConstraints.fill=GridBagConstraints.BOTH;
-		
-		JLabel portLabel = new JLabel("Port:");
-		JLabel buadrateLabel = new JLabel("Buadrate:");
-		JLabel logLabel = new JLabel("Log:");
-		String[] serialPortList = getSerialPortList();
-		JComboBox<String> portBox = new JComboBox<String>(serialPortList);
-		Integer[] buadrateList = {57600, 115200};
-		JComboBox<Integer> buadrateBox = new JComboBox<Integer>(buadrateList);
-		logPathField = new JTextField();
-		JButton openFileButton = new JButton("..");
 		JButton cancelButton = new JButton("Cancel");
 		cancelButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
@@ -256,85 +360,12 @@ public class GUI {
 			public void mouseExited(MouseEvent e) {}
 		});
 		
-		gridBagConstraints.gridx=0;
-        gridBagConstraints.gridy=0;
-        gridBagConstraints.gridwidth=1;                                             
-        gridBagConstraints.gridheight=1;            
-        gridBagLayout.setConstraints(portLabel, gridBagConstraints);
-        
-        gridBagConstraints.gridx=1;
-        gridBagConstraints.gridy=0;
-        gridBagConstraints.gridwidth=6;                                             
-        gridBagConstraints.gridheight=1;            
-        gridBagLayout.setConstraints(portBox, gridBagConstraints);
-        
-        gridBagConstraints.gridx=0;
-        gridBagConstraints.gridy=1;
-        gridBagConstraints.gridwidth=1;                                             
-        gridBagConstraints.gridheight=1;            
-        gridBagLayout.setConstraints(buadrateLabel, gridBagConstraints);
-        
-        gridBagConstraints.gridx=1;
-        gridBagConstraints.gridy=1;
-        gridBagConstraints.gridwidth=6;                                             
-        gridBagConstraints.gridheight=1;            
-        gridBagLayout.setConstraints(buadrateBox, gridBagConstraints);
-        
-        gridBagConstraints.gridx=0;
-        gridBagConstraints.gridy=2;
-        gridBagConstraints.gridwidth=1;                                             
-        gridBagConstraints.gridheight=1;            
-        gridBagLayout.setConstraints(logLabel, gridBagConstraints);
-        
-        gridBagConstraints.gridx=1;
-        gridBagConstraints.gridy=2;
-        gridBagConstraints.gridwidth=6;                                             
-        gridBagConstraints.gridheight=1;            
-        gridBagLayout.setConstraints(logPathField, gridBagConstraints);
-        
-        gridBagConstraints.gridx=7;
-        gridBagConstraints.gridy=2;
-        gridBagConstraints.gridwidth=1;                                             
-        gridBagConstraints.gridheight=1;            
-        gridBagLayout.setConstraints(openFileButton, gridBagConstraints);
-        
-        gridBagConstraints.gridx=5;
-        gridBagConstraints.gridy=3;
-        gridBagConstraints.gridwidth=1;                                             
-        gridBagConstraints.gridheight=1;            
-        gridBagLayout.setConstraints(cancelButton, gridBagConstraints);
-        
-        gridBagConstraints.gridx=6;
-        gridBagConstraints.gridy=3;
-        gridBagConstraints.gridwidth=1;                                             
-        gridBagConstraints.gridheight=1;            
-        gridBagLayout.setConstraints(confirmButton, gridBagConstraints);
-        
-        
-        connectionFrame.add(portLabel);
-        connectionFrame.add(portBox);
-        connectionFrame.add(buadrateLabel);
-        connectionFrame.add(buadrateBox);
-        connectionFrame.add(logLabel);
-        connectionFrame.add(logPathField);
-        connectionFrame.add(openFileButton);
+        connectionFrame.add(serialSettingPanel);
+        connectionFrame.add(logSettingPanel);
         connectionFrame.add(cancelButton);
         connectionFrame.add(confirmButton);
 		
-		openFileButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
-				FileDialog fileDialog = new FileDialog(connectionFrame);                 
-				fileDialog.setVisible(true);
-				String filePath = fileDialog.getDirectory();		
-				String fileName = fileDialog.getFile();		
-				if(filePath == null  || fileName == null){			
-				}else{
-					logPathField.setText(filePath + fileName);
-				}
-			}});
+		
 	}
 	
 	public String[] getSerialPortList() {
