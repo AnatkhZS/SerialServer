@@ -25,10 +25,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+
+import com.fazecast.jSerialComm.SerialPort;
 
 import bl.ConfigHandler;
 import bl.LogRecorder;
@@ -149,6 +152,8 @@ public class GUI {
 		GridLayout toolBoxGrid = new GridLayout(1, 6);
 		toolBoxPanel.setLayout(toolBoxGrid);
 		JButton connectButton = new JButton("Connect");
+		//set transparent
+		connectButton.setContentAreaFilled(false); 
 		connectButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
 				createConnectionFrame(true);
@@ -159,8 +164,10 @@ public class GUI {
 			public void mouseExited(MouseEvent e) {}
 		});
 		reConnectButton = new JButton("Reconnect");
+		reConnectButton.setContentAreaFilled(false);
 		reConnectButton.setEnabled(false);
 		disConnectButton = new JButton("Disconnect");
+		disConnectButton.setContentAreaFilled(false);
 		disConnectButton.setEnabled(false);
 		reConnectButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
@@ -182,8 +189,9 @@ public class GUI {
 			public void mouseEntered(MouseEvent e) {}
 			public void mouseExited(MouseEvent e) {}
 		});
-		JButton optonsButton = new JButton("Options");
-		optonsButton.addMouseListener(new MouseListener() {
+		JButton optionsButton = new JButton("Options");
+		optionsButton.setContentAreaFilled(false);
+		optionsButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
 				createConnectionFrame(false);
 			}
@@ -195,7 +203,7 @@ public class GUI {
 		toolBoxPanel.add(connectButton);
 		toolBoxPanel.add(reConnectButton);
 		toolBoxPanel.add(disConnectButton);
-		toolBoxPanel.add(optonsButton);
+		toolBoxPanel.add(optionsButton);
 		
 		JSplitPane mainPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, toolBoxPanel, splitPane);
 		mainPane.setDividerSize(3);
@@ -385,9 +393,9 @@ public class GUI {
 				boolean isAppendToFile = appendRadioButton.isSelected();
 				if(isConnect) {
 					if(serialMap.containsKey(serialPort)) {
-						JOptionPane.showMessageDialog(null, "请勿重复添加！", "Attention", JOptionPane.ERROR_MESSAGE);
+						JOptionPane.showMessageDialog(null, "Can't add port repeatly!", "Attention", JOptionPane.ERROR_MESSAGE);
 					}else if(isStartAtMidnight && !logPath.contains("%D")) {
-						JOptionPane.showMessageDialog(null, "文件名必须包含\"%D\"！", "Attention", JOptionPane.ERROR_MESSAGE);
+						JOptionPane.showMessageDialog(null, "Use %D in your log path!", "Attention", JOptionPane.ERROR_MESSAGE);
 					}else {
 						if(!logPath.equals("") && logPath!=null && !logPath.endsWith(".log")){
 							logPath = logPath+".log";
@@ -406,9 +414,9 @@ public class GUI {
 					}
 				}else {
 					if(serialMap.containsKey(serialPort) && !serialPort.equals(currentSerialSession.getSerialPort())) {
-						JOptionPane.showMessageDialog(null, "请勿重复添加！", "Attention", JOptionPane.ERROR_MESSAGE);
+						JOptionPane.showMessageDialog(null, "Can't add port repeatly!", "Attention", JOptionPane.ERROR_MESSAGE);
 					}else if(isStartAtMidnight && !logPath.contains("%D")) {
-						JOptionPane.showMessageDialog(null, "文件名必须包含\"%D\"！", "Attention", JOptionPane.ERROR_MESSAGE);
+						JOptionPane.showMessageDialog(null, "Use %D in your log path!", "Attention", JOptionPane.ERROR_MESSAGE);
 					}else {
 						String currentSerialPort = currentSerialSession.getSerialPort();
 						serialMap.get(currentSerialPort).setStop();
@@ -455,30 +463,38 @@ public class GUI {
 	}
 	
 	public String[] getSerialPortList() {
-		Process p = null;
+		Properties props = System.getProperties();
+		String osName = props.getProperty("os.name");
         List<String> result = new ArrayList<String>();
-        try {
-        	//according to os type
-            p = new ProcessBuilder("ls", "/dev").start();
-        } catch (Exception e) {
-            return null;
-        }
-        //读取进程输出值
-        InputStream inputStream = p.getInputStream();
-        BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
-        String s = "";
-        try {
-            while ((s = br.readLine()) != null) {
-            	if(s.startsWith("cu"))
-                	result.add(s);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
+        if(osName.startsWith("Windows")){
+        	SerialPort[] portList = SerialPort.getCommPorts();
+        	for(SerialPort port:portList){
+        		String portDes = port.getDescriptivePortName();
+        		result.add((portDes.split("\\(")[1]).split("\\)")[0]);
+        	}
+        }else if(true){
+        	Process p = null;
             try {
-                inputStream.close();
+                p = new ProcessBuilder("ls", "/dev").start();
+            } catch (Exception e) {
+                return null;
+            }
+            InputStream inputStream = p.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+            String s = "";
+            try {
+                while ((s = br.readLine()) != null) {
+                	if(s.startsWith("cu"))
+                    	result.add(s);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                try {
+                    inputStream.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
         return toArray(result);
@@ -599,7 +615,7 @@ public class GUI {
 						serialMap.get(serialPort).setStop();
 						Thread.sleep(100);
 					} catch(java.lang.NullPointerException e1) {
-						System.out.println("Map size: " + serialMap.size());
+						System.out.println("ERROR, Map size: " + serialMap.size());
 					}catch (InterruptedException e2) {
 						e2.printStackTrace();
 					}
@@ -637,7 +653,9 @@ public class GUI {
 					DatagramPacket packet = new DatagramPacket(container, container.length);
 					try {
 						server.receive(packet);
-					}catch(java.net.SocketException e) {}
+					}catch(java.net.SocketException e) {
+						break;
+					}
 					byte[] data = packet.getData();
 					int len = packet.getLength();
 					String request = new String(data, 0, len);
