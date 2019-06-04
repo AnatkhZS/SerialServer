@@ -545,9 +545,10 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 		invalidateTab();
 	}
 
-	public void removeTab(Tab tab) {
-		if (tabList.contains(tab)) {
-			removeTab(tabList.indexOf(tab));
+	public void removeTab(String title) {
+		for(int i=0;i<tabList.size();i++) {
+			if(((Tab)tabList.get(i)).getTitle().equals(title))
+				removeTab(i);
 		}
 	}
 

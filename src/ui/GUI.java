@@ -427,7 +427,31 @@ public class GUI {
 						SwingUtilities.invokeLater(new SessionCreator(ss));
 					}
 				}else {
-					//options
+					if(serialMap.containsKey(serialPort) && !serialPort.equals(currentSerialSession.getSerialPort())) {
+						JOptionPane.showMessageDialog(null, "请勿重复添加！", "Attention", JOptionPane.ERROR_MESSAGE);
+					}else if(isStartAtMidnight && !logPath.contains("%D")) {
+						JOptionPane.showMessageDialog(null, "文件名必须包含\"%D\"！", "Attention", JOptionPane.ERROR_MESSAGE);
+					}else {
+						String currentSerialPort = currentSerialSession.getSerialPort();
+						serialMap.get(currentSerialPort).setStop();
+						serialMap.remove(currentSerialPort);
+						//TODO remove ui
+						tabPane.removeTab(currentSerialPort);
+						if(!logPath.equals("") && logPath!=null && !logPath.endsWith(".log")){
+							logPath = logPath+".log";
+						}
+						if(!configHandler.contain(serialPort))
+							configHandler.addSerial(serialPort);
+						configHandler.setValue(serialPort, "name", serialPort);
+						configHandler.setValue(serialPort, "buadrate", buadrate);
+						configHandler.setValue(serialPort, "logPath", logPath);
+						configHandler.setValue(serialPort, "isRecord", isRecord);
+						configHandler.setValue(serialPort, "isStartAtMidnight", isStartAtMidnight);
+						configHandler.setValue(serialPort, "isAppendToFile", isAppendToFile);
+						connectionFrame.dispose();
+						SerialSession ss = new SerialSession(serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile);
+						SwingUtilities.invokeLater(new SessionCreator(ss));
+					}
 				}
 			}
 			public void mousePressed(MouseEvent e) {}
@@ -612,7 +636,7 @@ public class GUI {
 					}
 					toDeleteArray[0].setVisible(false);
 					toDeleteArray[0] = null;
-					tabPane.removeTab(tab);
+					tabPane.removeTab(serialSession.getSerialPort());
 					//shutdown
 					serialMap.remove(serialPort);
 				}
@@ -643,8 +667,9 @@ public class GUI {
 				while(true) {
 					byte[] container = new byte[1024];
 					DatagramPacket packet = new DatagramPacket(container, container.length);
-					server.receive(packet);
-					
+					try {
+						server.receive(packet);
+					}catch(java.net.SocketException e) {}
 					byte[] data = packet.getData();
 					int len = packet.getLength();
 					String request = new String(data, 0, len);
