@@ -1,20 +1,24 @@
 package bl;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
 import data.SerialHandler;
 
 public class Test {
 	public static void main(String args[]) throws InterruptedException {
-		SerialHandler sh = new SerialHandler("cu.SLAB_USBtoUART", 115200);
-		LogRecorder lr = new LogRecorder(sh, "/Users/zhusong/Documents/code/log.txt", true, true);
-		lr.startRecord();
-		SerialServer server = new SerialServer(sh);
-		server.createServer();
-		System.out.println("11111");
-//		while(true) {
-//			String line = sh.readLine(0);
-//			if(line!=null)
-//				System.out.println(line);
-//			Thread.sleep(10);
-//		}
+		Integer[] intArray = {1,2,3};
+		int a = 3;
+		System.out.println(new Test().index(intArray, a));
+	}
+	
+	private int index(Object[] buadrateList, Object value) {
+		for(int i=0;i<buadrateList.length;i++) {
+			if(buadrateList[i]==value) {
+				return i;
+			}
+		}
+		return -1;
 	}
 }

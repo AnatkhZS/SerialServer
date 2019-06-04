@@ -1,21 +1,26 @@
 package ui;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.FileDialog;
-import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,28 +30,34 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
+import bl.ConfigHandler;
 import bl.LogRecorder;
-import bl.SerialServer;
-import data.SerialHandler;
+import bl.SerialSession;
+import info.clearthought.layout.TableLayout;
 import zht.tab.Tab;
 import zht.tab.ZHTChromeTabbedPane;
 import zht.tab.ZHTTabbedPane;
 
 public class GUI {
 	private final int MAX_LINE_COUNT = 1000;
-	private JTextArea inputTextArea;
-	private SerialHandler currentSerialHandler;
+	private int SERVER_PORT = 9428;
+	private String CONFIG_PATH = "config.json";
+	private String REQUEST_SPLITER = "@";
+	private DatagramSocket server;
+	private RecordTextArea inputTextArea;
+	private SerialSession currentSerialSession;
+	private ConfigHandler configHandler;
 	private boolean isScrollBarClicked = false;
 	private JButton reConnectButton;
 	private JButton disConnectButton;
-	private JTextField logPathField;
+	private JTextField logPathField = new JTextField();
 	private ZHTTabbedPane tabPane;
 	
 	private String serialPort;
 	private int buadrate;
 	private String logPath;
 	
-	private Map<String, SerialHandler> serialMap = new HashMap<String, SerialHandler>();
+	private Map<String, SerialSession> serialMap = new HashMap<String, SerialSession>();
 	
 	public static void main(String args[]) {
 		new GUI().run();
@@ -56,9 +67,13 @@ public class GUI {
 		
 //		SerialHandler sh = new SerialHandler("cu.SLAB_USBtoUART", 115200);
 //		currentSerialHandler = sh;
+		configHandler = new ConfigHandler(CONFIG_PATH);
 		GUICreator c = new GUICreator();
 		Thread guiThread = new Thread(c);
 		guiThread.start();
+		Server s = new Server();
+		Thread serverThread = new Thread(s);
+		serverThread.start();
 //		try {
 //			Thread.sleep(5000);
 //		} catch (InterruptedException e) {
@@ -77,7 +92,14 @@ public class GUI {
 	private void createGUI() {
 		//JFrame.setDefaultLookAndFeelDecorated(true);
 		JFrame frame = new JFrame("SerialServer");
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		frame.addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				configHandler.save();
+				server.close();
+				System.exit(0);
+			}
+		});
 		frame.setSize(900, 600);
 		frame.setLocationRelativeTo(null);
 		
@@ -97,20 +119,29 @@ public class GUI {
 			@Override
 			public void selectTab(SelectTabEvent e) {
 				// TODO Auto-generated method stub
-				currentSerialHandler = serialMap.get(e.getTabName());
+				currentSerialSession = serialMap.get(e.getTabName());
 				setButtonStatus();
 			}});
 		
-		inputTextArea = new JTextArea();
+		inputTextArea = new RecordTextArea();
 		inputTextArea.setLineWrap(true);
 		inputTextArea.addKeyListener(new KeyListener() {
 		    @Override
 		    public void keyPressed(KeyEvent e) {
-		    	int key = e.getKeyCode();
-		    	if(key == '\n'){
+		    	int keyCode = e.getKeyCode();
+		    	if(keyCode == '\n'){
 		        	String line  = inputTextArea.getText();
-		        	for(char c:(line+"\n").toCharArray())
-		        		currentSerialHandler.write(c);
+		        	if(line.length() > 0) {
+		        		inputTextArea.push(line);
+		        	}
+		        	if(currentSerialSession!=null) {
+		        		for(char c:(line+"\n").toCharArray())
+		        			currentSerialSession.write(c);
+		        	}
+		        }else if(keyCode == KeyEvent.VK_UP) {
+		        	inputTextArea.setText(inputTextArea.backward());
+		        }else if(keyCode == KeyEvent.VK_DOWN) {
+		        	inputTextArea.setText(inputTextArea.forward());
 		        }
 		    }
 		 
@@ -142,7 +173,7 @@ public class GUI {
 		JButton connectButton = new JButton("Connect");
 		connectButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
-				createConnectionFrame();
+				createConnectionFrame(true);
 			}
 			public void mousePressed(MouseEvent e) {}
 			public void mouseReleased(MouseEvent e) {}
@@ -155,7 +186,7 @@ public class GUI {
 		disConnectButton.setEnabled(false);
 		reConnectButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
-				currentSerialHandler.reconnect();
+				currentSerialSession.reconnect();
 				setButtonStatus();
 			}
 			public void mousePressed(MouseEvent e) {}
@@ -165,7 +196,7 @@ public class GUI {
 		});
 		disConnectButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
-				currentSerialHandler.setStop();
+				currentSerialSession.setStop();
 				setButtonStatus();
 			}
 			public void mousePressed(MouseEvent e) {}
@@ -174,6 +205,15 @@ public class GUI {
 			public void mouseExited(MouseEvent e) {}
 		});
 		JButton optonsButton = new JButton("Options");
+		optonsButton.addMouseListener(new MouseListener() {
+			public void mouseClicked(MouseEvent e) {
+				createConnectionFrame(false);
+			}
+			public void mousePressed(MouseEvent e) {}
+			public void mouseReleased(MouseEvent e) {}
+			public void mouseEntered(MouseEvent e) {}
+			public void mouseExited(MouseEvent e) {}
+		});
 		toolBoxPanel.add(connectButton);
 		toolBoxPanel.add(reConnectButton);
 		toolBoxPanel.add(disConnectButton);
@@ -193,7 +233,7 @@ public class GUI {
 	}
 	
 	private void setButtonStatus() {
-		if(currentSerialHandler.isStop()) {
+		if(currentSerialSession.isStop()) {
 			reConnectButton.setEnabled(true);
 			disConnectButton.setEnabled(false);
 		}else {
@@ -202,13 +242,15 @@ public class GUI {
 		}
 	}
 	
-	private void createConnectionFrame() {
+	private void createConnectionFrame(boolean isConnect) {
 		JFrame connectionFrame = new JFrame("Options");
-		connectionFrame.setSize(400,300);
+		connectionFrame.setSize(420,300);
 		connectionFrame.setVisible(true);
 //		connectionFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		connectionFrame.setLocationRelativeTo(null);
-		connectionFrame.setLayout(new VFlowLayout());
+		double size[][] = {{TableLayout.FILL}, {0.3, 0.4, 0.4}};
+		TableLayout mainTableLayout = new TableLayout(size);
+		connectionFrame.setLayout(mainTableLayout);
 
 		JPanel serialSettingPanel = new JPanel();
 		serialSettingPanel.setBorder(BorderFactory.createTitledBorder("Serial Setting"));
@@ -217,7 +259,18 @@ public class GUI {
 		serialSettingConstraints.fill=GridBagConstraints.BOTH;
 		serialSettingPanel.setLayout(serialSettingLayout);
 		JComboBox<String> portBox;
-		JComboBox<Integer> buadrateBox;
+		String[] serialPortList = getSerialPortList();
+		Integer[] buadrateList = {57600, 115200};
+		JComboBox<Integer> buadrateBox = new JComboBox<Integer>(buadrateList);
+		JCheckBox startOnConnectCheckBox = new JCheckBox("Start log upon connect");
+		JCheckBox newLogAtMidnightCheckBox = new JCheckBox("Start new log at midnight(use %D)");
+		JRadioButton overwriteRadioButton = new JRadioButton("Overwrite file");
+		JRadioButton appendRadioButton = new JRadioButton("Append to file");
+		appendRadioButton.setSelected(true);
+
+		ButtonGroup buttonGroup = new ButtonGroup();
+		buttonGroup.add(overwriteRadioButton);
+		buttonGroup.add(appendRadioButton);
 		{
 			JLabel portLabel = new JLabel("Port:");
 			serialSettingConstraints.gridx=0;
@@ -228,8 +281,35 @@ public class GUI {
 	        serialSettingPanel.add(portLabel);
 		}
 		{
-			String[] serialPortList = getSerialPortList();
 			portBox = new JComboBox<String>(serialPortList);
+			portBox.addItemListener(new ItemListener() {
+				@Override
+				public void itemStateChanged(ItemEvent e) {
+					if(e.getStateChange() == ItemEvent.SELECTED) {
+						String serialPort = (String)e.getItem();
+						if(configHandler.contain(serialPort)) {
+							int buadrate = (int)configHandler.query(serialPort, "buadrate");
+							String logPath = (String)configHandler.query(serialPort, "logPath");
+							boolean isRecord = (boolean)configHandler.query(serialPort, "isRecord");
+							boolean isStartAtMidnight = (boolean)configHandler.query(serialPort, "isStartAtMidnight");
+							boolean isAppendToFile = (boolean)configHandler.query(serialPort, "isAppendToFile");
+							buadrateBox.setSelectedIndex(index(buadrateList, buadrate));
+							logPathField.setText(logPath);
+							startOnConnectCheckBox.setSelected(isRecord);
+							newLogAtMidnightCheckBox.setSelected(isStartAtMidnight);
+							if(isAppendToFile)
+								appendRadioButton.setSelected(true);
+							else
+								overwriteRadioButton.setSelected(true);
+						}else {
+							buadrateBox.setSelectedIndex(0);
+							logPathField.setText("");
+							startOnConnectCheckBox.setSelected(false);
+							newLogAtMidnightCheckBox.setSelected(false);
+							appendRadioButton.setSelected(true);
+						}
+					}
+				}});
 			serialSettingConstraints.gridx=2;
 	        serialSettingConstraints.gridy=0;
 	        serialSettingConstraints.gridwidth=12;                                             
@@ -247,8 +327,6 @@ public class GUI {
 	        serialSettingPanel.add(buadrateLabel);
 		}
 		{
-			Integer[] buadrateList = {57600, 115200};
-			buadrateBox = new JComboBox<Integer>(buadrateList);
 			serialSettingConstraints.gridx=2;
 	        serialSettingConstraints.gridy=1;
 	        serialSettingConstraints.gridwidth=12;                                             
@@ -259,73 +337,53 @@ public class GUI {
 
 		JPanel logSettingPanel = new JPanel();
 		logSettingPanel.setBorder(BorderFactory.createTitledBorder("Log Setting"));
-		GridBagLayout logSettingLayout = new GridBagLayout();
-		GridBagConstraints logSettingConstraints = new GridBagConstraints();
-		logSettingConstraints.fill=GridBagConstraints.BOTH;
-		logSettingPanel.setLayout(logSettingLayout);
-		{
-			JCheckBox recordBox = new JCheckBox("record");
-			logSettingConstraints.gridx=0;
-			logSettingConstraints.gridy=0;
-			logSettingConstraints.gridwidth=1;                                             
-			logSettingConstraints.gridheight=1;            
-			logSettingLayout.setConstraints(recordBox, logSettingConstraints);
-			logSettingPanel.add(recordBox);
-		}
-		{
-			JLabel nullPanel = new JLabel();
-			logSettingConstraints.gridx=1;
-			logSettingConstraints.gridy=0;
-			logSettingConstraints.gridwidth=10;                                             
-			logSettingConstraints.gridheight=1;            
-			logSettingLayout.setConstraints(nullPanel, logSettingConstraints);
-			logSettingPanel.add(nullPanel);
-		}
-		{
-			JLabel logLabel = new JLabel("Log:");
-			logSettingConstraints.gridx=0;
-			logSettingConstraints.gridy=1;
-			logSettingConstraints.gridwidth=2;                                             
-			logSettingConstraints.gridheight=1;    
-			logSettingLayout.setConstraints(logLabel, logSettingConstraints);
-			logSettingPanel.add(logLabel);
-		}
-		{
-			logPathField = new JTextField();
-			logSettingConstraints.gridx=2;
-			logSettingConstraints.gridy=1;
-			logSettingConstraints.gridwidth=8;                                             
-			logSettingConstraints.gridheight=1; 
-			logSettingConstraints.weightx=100;
-			logSettingConstraints.weighty=100;
-			logSettingLayout.setConstraints(logPathField, logSettingConstraints);
-			logSettingPanel.add(logPathField);
-		}
-		{
-			JButton openFileButton = new JButton("..");
-			openFileButton.addActionListener(new ActionListener() {
+		double size1[][] = {{0.1, 0.4, 0.2, 0.2, 0.1}, {0.3, 0.3, 0.3, TableLayout.FILL}};
+		TableLayout tableLayout = new TableLayout(size1);
+		logSettingPanel.setLayout(tableLayout);
+		JLabel logLabel = new JLabel("Log:");
+		JButton openFileButton = new JButton("..");
+		openFileButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				FileDialog fileDialog = new FileDialog(connectionFrame);                 
+				fileDialog.setVisible(true);
+				String filePath = fileDialog.getDirectory();		
+				String fileName = fileDialog.getFile();		
+				if(filePath == null  || fileName == null){			
+				}else{
+					logPathField.setText(filePath + fileName);
+				}
+			}});
 
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					// TODO Auto-generated method stub
-					FileDialog fileDialog = new FileDialog(connectionFrame);                 
-					fileDialog.setVisible(true);
-					String filePath = fileDialog.getDirectory();		
-					String fileName = fileDialog.getFile();		
-					if(filePath == null  || fileName == null){			
-					}else{
-						logPathField.setText(filePath + fileName);
-					}
-				}});
-			
-			logSettingConstraints.gridx=10;
-			logSettingConstraints.gridy=1;
-			logSettingConstraints.gridwidth=1;                                             
-			logSettingConstraints.gridheight=1;            
-			logSettingLayout.setConstraints(openFileButton, logSettingConstraints);
-			logSettingPanel.add(openFileButton);
-		}
+		logSettingPanel.add(logLabel, "0, 0");
+		logSettingPanel.add(logPathField, "1, 0, 3, 0");
+		logSettingPanel.add(openFileButton, "4, 0, c, c");
+		logSettingPanel.add(startOnConnectCheckBox, "0, 1, 1, 1");
+		logSettingPanel.add(overwriteRadioButton, "3, 1, 4, 1");
+		logSettingPanel.add(newLogAtMidnightCheckBox, "0, 2, 2, 2");
+		logSettingPanel.add(appendRadioButton, "3, 2, 4, 2");
 		
+		JPanel confirmPanel = new JPanel();
+		double size3[][] = {{0.2, 0.2, 0.2, 0.2, 0.2}, {TableLayout.FILL, 0.3, 0.3, 0.3}};
+		TableLayout comfirmTableLayout = new TableLayout(size3);
+		confirmPanel.setLayout(comfirmTableLayout);
+		
+		if(!isConnect) {
+			String serialPort = currentSerialSession.getSerialPort();
+			int buadrate = currentSerialSession.getBuadrate();
+			String logPath = currentSerialSession.getLogPath();
+			boolean isRecord = currentSerialSession.isRecord();
+			boolean isStartAtMidnight = currentSerialSession.isStartAtMidnight();
+			boolean isAppendToFile = currentSerialSession.isAppendToFile();
+			portBox.setSelectedIndex(index(serialPortList, serialPort));
+			buadrateBox.setSelectedIndex(index(buadrateList, buadrate));
+			logPathField.setText(logPath);
+			startOnConnectCheckBox.setSelected(isRecord);
+			newLogAtMidnightCheckBox.setSelected(isStartAtMidnight);
+			if(isAppendToFile)
+				appendRadioButton.setSelected(true);
+			else
+				overwriteRadioButton.setSelected(true);
+		}
 		
 		JButton cancelButton = new JButton("Cancel");
 		cancelButton.addMouseListener(new MouseListener() {
@@ -334,7 +392,7 @@ public class GUI {
 			}
 			public void mousePressed(MouseEvent e) {}
 			public void mouseReleased(MouseEvent e) {}
-			public void mouseEntered(MouseEvent e) {}
+			public void mouseEntered(MouseEvent e) {} 
 			public void mouseExited(MouseEvent e) {}
 		});
 		
@@ -344,14 +402,32 @@ public class GUI {
 				serialPort = (String) portBox.getSelectedItem();
 				buadrate = (int) buadrateBox.getSelectedItem();
 				logPath = logPathField.getText();
-				if(serialMap.containsKey(serialPort)) {
-					JOptionPane.showMessageDialog(null, "请勿重复添加！", "Attention", JOptionPane.ERROR_MESSAGE);
+				boolean isRecord = startOnConnectCheckBox.isSelected();
+				boolean isStartAtMidnight = newLogAtMidnightCheckBox.isSelected();
+				boolean isAppendToFile = appendRadioButton.isSelected();
+				if(isConnect) {
+					if(serialMap.containsKey(serialPort)) {
+						JOptionPane.showMessageDialog(null, "请勿重复添加！", "Attention", JOptionPane.ERROR_MESSAGE);
+					}else if(isStartAtMidnight && !logPath.contains("%D")) {
+						JOptionPane.showMessageDialog(null, "文件名必须包含\"%D\"！", "Attention", JOptionPane.ERROR_MESSAGE);
+					}else {
+						if(!logPath.equals("") && logPath!=null && !logPath.endsWith(".log")){
+							logPath = logPath+".log";
+						}
+						if(!configHandler.contain(serialPort))
+							configHandler.addSerial(serialPort);
+						configHandler.setValue(serialPort, "name", serialPort);
+						configHandler.setValue(serialPort, "buadrate", buadrate);
+						configHandler.setValue(serialPort, "logPath", logPath);
+						configHandler.setValue(serialPort, "isRecord", isRecord);
+						configHandler.setValue(serialPort, "isStartAtMidnight", isStartAtMidnight);
+						configHandler.setValue(serialPort, "isAppendToFile", isAppendToFile);
+						connectionFrame.dispose();
+						SerialSession ss = new SerialSession(serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile);
+						SwingUtilities.invokeLater(new SessionCreator(ss));
+					}
 				}else {
-					connectionFrame.dispose();
-//					SerialHandler sh = new SerialHandler(serialPort, buadrate);
-//					SwingUtilities.invokeLater(new SessionCreator(sh));
-					SwingUtilities.invokeLater(new SessionCreator(serialPort, buadrate, logPath));
-//					new Thread(new SessionCreator(serialPort, buadrate, logPath)).start();
+					//options
 				}
 			}
 			public void mousePressed(MouseEvent e) {}
@@ -359,13 +435,21 @@ public class GUI {
 			public void mouseEntered(MouseEvent e) {}
 			public void mouseExited(MouseEvent e) {}
 		});
+		confirmPanel.add(cancelButton, "3, 2");
+		confirmPanel.add(confirmButton, "4, 2");
 		
-        connectionFrame.add(serialSettingPanel);
-        connectionFrame.add(logSettingPanel);
-        connectionFrame.add(cancelButton);
-        connectionFrame.add(confirmButton);
-		
-		
+        connectionFrame.add(serialSettingPanel, "0, 0");
+        connectionFrame.add(logSettingPanel, "0, 1");
+        connectionFrame.add(confirmPanel, "0, 2");
+	}
+	
+	private int index(Object[] lst, Object value) {
+		for(int i=0;i<lst.length;i++) {
+			if(lst[i].equals(value)) {
+				return i;
+			}
+		}
+		return -1;
 	}
 	
 	public String[] getSerialPortList() {
@@ -419,11 +503,11 @@ public class GUI {
 	}
 	
 	private class DisplayLog implements Runnable{
-		private SerialHandler sh;
+		private SerialSession serialSession;
 		private JTextArea showTextArea;
 		
-		public DisplayLog(SerialHandler sh, JTextArea showTextArea) {
-			this.sh = sh;
+		public DisplayLog(SerialSession serialSession, JTextArea showTextArea) {
+			this.serialSession = serialSession;
 			this.showTextArea = showTextArea;
 		}
 
@@ -463,8 +547,8 @@ public class GUI {
 					
 				}});
 			while(true) {
-				if(!sh.isStop()) {
-					String line = sh.readLine(0);
+				if(!serialSession.isStop()) {
+					String line = serialSession.readLine(0);
 					if(line!=null) {
 						showTextArea.append(line);
 						if(!isScrollBarClicked)
@@ -483,26 +567,19 @@ public class GUI {
 	}
 	
 	private class SessionCreator implements Runnable{
-		private String serialPort;
-		private int buadrate;
-		private String logPath;
-		private SerialHandler sh;
+		private SerialSession serialSession;
 		
-		public SessionCreator(String serialPort, int buadrate, String logPath) {
-			this.serialPort = serialPort;
-			this.buadrate = buadrate;
-			this.logPath = logPath;
-			this.sh = new SerialHandler(serialPort, buadrate);
-			serialMap.put(sh.getSerialName(), sh);
-			currentSerialHandler = sh;
+		public SessionCreator(SerialSession serialSession) {
+			this.serialSession = serialSession;
+			serialMap.put(serialSession.getSerialPort(), serialSession);
+			currentSerialSession = serialSession;
 		}
 
 		@Override
 		public void run() {
 			reConnectButton.setEnabled(false);
 			disConnectButton.setEnabled(true);
-			JTextArea showTextArea = new JTextArea();	
-			showTextArea = new JTextArea();
+			RecordTextArea showTextArea = new RecordTextArea();	
 			showTextArea.setLineWrap(true);
 			showTextArea.setEditable(false);
 			JScrollPane[] toDeleteArray = new JScrollPane[1];
@@ -521,18 +598,17 @@ public class GUI {
 				public void mouseExited(MouseEvent e) {}
 			});
 			
-			Tab tab = new Tab(showScrollPane, true, null, sh.getSerialName());
+			Tab tab = new Tab(showScrollPane, true, null, serialSession.getSerialPort());
 			tab.addListener(new MyHandler() {
 				public void removeTab(RemoveTabEvent e) {
-					// TODO Auto-generated method stub
 					String serialPort = e.getTabName();
-					SerialHandler toDelete = serialMap.get(serialPort);
-					toDelete.setStop();
 					try {
+						serialMap.get(serialPort).setStop();
 						Thread.sleep(100);
-					} catch (InterruptedException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
+					} catch(java.lang.NullPointerException e1) {
+						System.out.println("Map size: " + serialMap.size());
+					}catch (InterruptedException e2) {
+						e2.printStackTrace();
 					}
 					toDeleteArray[0].setVisible(false);
 					toDeleteArray[0] = null;
@@ -544,11 +620,48 @@ public class GUI {
 				@Override
 				public void selectTab(SelectTabEvent e) {
 					// TODO Auto-generated method stub
-					
+					String serialPort = e.getTabName();
+					currentSerialSession = serialMap.get(serialPort);
 				}});
 			tabPane.addTab(tab);
-			DisplayLog dl = new DisplayLog(sh, showTextArea);
+			DisplayLog dl = new DisplayLog(serialSession, showTextArea);
 			new Thread(dl).start();
+			//start log thread
+			if(serialSession.isRecord()) {
+				LogRecorder lr = new LogRecorder(serialSession);
+				lr.startRecord();
+			}
 		}	
+	}
+	
+	private class Server implements Runnable{
+
+		@Override
+		public void run() {
+			try {
+				server = new DatagramSocket(SERVER_PORT);
+				while(true) {
+					byte[] container = new byte[1024];
+					DatagramPacket packet = new DatagramPacket(container, container.length);
+					server.receive(packet);
+					
+					byte[] data = packet.getData();
+					int len = packet.getLength();
+					String request = new String(data, 0, len);
+					//request format: "port@cmd"
+					System.out.println(request);
+					String portName = request.split(REQUEST_SPLITER)[0];
+					String cmd = request.split(REQUEST_SPLITER)[1];
+					SerialSession ss = serialMap.get(portName);
+					if(ss != null) {
+						for(char c:cmd.toCharArray())
+							ss.write(c);
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
 	}
 }

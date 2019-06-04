@@ -3,58 +3,76 @@ package bl;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 import data.SerialHandler;
 
 public class LogRecorder {
-	private SerialHandler serialHandler;
+	private SerialSession serialSession;
 	private String fileName;
-	private boolean startOnNewDate;
-	private boolean overwriteFile;
-	private boolean isStop = false;
+	private boolean isStartAtMidnight;
+	private boolean isAppendToFile;
 	
-	public LogRecorder(SerialHandler serialHandler, String fileName, boolean startOnNewDate, boolean overwriteFile) {
-		this.serialHandler = serialHandler;
-		this.fileName = fileName;
-		this.startOnNewDate = startOnNewDate;
-		this.overwriteFile = overwriteFile;
+	public LogRecorder(SerialSession serialSession) {
+		this.serialSession = serialSession;
+		this.fileName = serialSession.getLogPath();
+		this.isStartAtMidnight = serialSession.isStartAtMidnight();
+		this.isAppendToFile = serialSession.isAppendToFile();
 	}
 	
 	public File fileInit(String fileName) {
 		File logFile = new File(fileName);
-		if(overwriteFile && logFile.exists())
+		if((!isAppendToFile) && logFile.exists())
 			logFile.delete();
 		if(!logFile.exists()) {
 			try {
 				logFile.createNewFile();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 		return logFile;
 	}
 	
-	public void setStop() {
-		this.isStop = true;
-	}
-	
 	public void startRecord() {
-		Recorde r = new Recorde();
+		Record r = new Record();
 		Thread recordeThread = new Thread(r);
 		recordeThread.start();
 	}
 	
-	private class Recorde implements Runnable{
+	private String getDate() {
+		Calendar cal = Calendar.getInstance();
+		Date time = cal.getTime();
+		SimpleDateFormat df = new SimpleDateFormat("MM-dd");
+		String timeStr = df.format(time);
+		return timeStr;
+	}
+	
+	private class Record implements Runnable{
 
 		@Override
 		public void run() {
 			// TODO Auto-generated method stub
-			File logFile = fileInit(fileName);
+			String date = getDate();
+			String monthStr = date.split("-")[0];
+			String dayStr = date.split("-")[1];
+			File logFile = fileInit(fileName.replace("%M", monthStr).replace("%D", dayStr));
 			try {
 				FileWriter writer = new FileWriter(logFile, true);
-				while(!serialHandler.isStop()) {
-					String line = serialHandler.readLine(1);
+				while(!serialSession.isStop()) {
+					if(isStartAtMidnight) {
+						String currenDate;
+						if((currenDate=getDate())!=date) {
+							writer.close();
+							monthStr = currenDate.split("-")[0];
+							dayStr = currenDate.split("-")[1];
+							logFile = fileInit(fileName.replace("%M", monthStr).replace("%D", dayStr));
+							writer = new FileWriter(logFile, true);
+						}
+					}
+					String line = serialSession.readLine(1);
 					if(line!=null) {
 						writer.write(line);
 						writer.flush();
