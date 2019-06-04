@@ -64,9 +64,6 @@ public class GUI {
 	}
 	
 	private void run() {
-		
-//		SerialHandler sh = new SerialHandler("cu.SLAB_USBtoUART", 115200);
-//		currentSerialHandler = sh;
 		configHandler = new ConfigHandler(CONFIG_PATH);
 		GUICreator c = new GUICreator();
 		Thread guiThread = new Thread(c);
@@ -74,19 +71,6 @@ public class GUI {
 		Server s = new Server();
 		Thread serverThread = new Thread(s);
 		serverThread.start();
-//		try {
-//			Thread.sleep(5000);
-//		} catch (InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		LogRecorder lr = new LogRecorder(sh, "/Users/zhusong/Documents/code/log.txt", true, true);
-//		lr.startRecord();
-//		SerialServer server = new SerialServer(sh);
-//		server.createServer();
-//		DisplayLog dl = new DisplayLog(sh);
-//		Thread displayThread = new Thread(dl);
-//		displayThread.start();
 	}
 	
 	private void createGUI() {
@@ -104,21 +88,15 @@ public class GUI {
 		frame.setLocationRelativeTo(null);
 		
 		JPanel panel = new JPanel();
-//		showTextArea = new JTextArea();
-//		showTextArea.setLineWrap(true);
-//		showTextArea.setEditable(false);
 		tabPane = new ZHTChromeTabbedPane();
 		tabPane.addListener(new MyHandler() {
 
 			@Override
 			public void removeTab(RemoveTabEvent e) {
-				// TODO Auto-generated method stub
-				
 			}
 
 			@Override
 			public void selectTab(SelectTabEvent e) {
-				// TODO Auto-generated method stub
 				currentSerialSession = serialMap.get(e.getTabName());
 				setButtonStatus();
 			}});
@@ -520,7 +498,6 @@ public class GUI {
 
 		@Override
 		public void run() {
-			// TODO Auto-generated method stub
 			createGUI();
 		}
 		
@@ -537,17 +514,14 @@ public class GUI {
 
 		@Override
 		public void run() {
-			// TODO Auto-generated method stub
 			showTextArea.getDocument().addDocumentListener(new DocumentListener() {
 
 				@Override
 				public void insertUpdate(DocumentEvent e) {
-					// TODO Auto-generated method stub
 					SwingUtilities.invokeLater(new Runnable() {
 
 						@Override
 						public void run() {
-							// TODO Auto-generated method stub
 							if(showTextArea.getLineCount()>=MAX_LINE_COUNT) {
 								int end = 0;
 								try {
@@ -561,14 +535,10 @@ public class GUI {
 
 				@Override
 				public void removeUpdate(DocumentEvent e) {
-					// TODO Auto-generated method stub
-					
 				}
 
 				@Override
 				public void changedUpdate(DocumentEvent e) {
-					// TODO Auto-generated method stub
-					
 				}});
 			while(true) {
 				if(!serialSession.isStop()) {
@@ -582,7 +552,6 @@ public class GUI {
 				try {
 					Thread.sleep(10);
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -643,7 +612,6 @@ public class GUI {
 
 				@Override
 				public void selectTab(SelectTabEvent e) {
-					// TODO Auto-generated method stub
 					String serialPort = e.getTabName();
 					currentSerialSession = serialMap.get(serialPort);
 				}});
