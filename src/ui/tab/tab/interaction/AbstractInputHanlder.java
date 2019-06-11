@@ -1,9 +1,3 @@
-/*
-*
-* @author zhangtao
-*
-* Msn & Mail: zht_dream@hotmail.com
-*/
 package ui.tab.tab.interaction;
 
 import java.awt.event.KeyEvent;

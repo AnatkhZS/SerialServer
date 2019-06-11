@@ -1,9 +1,3 @@
-/*
-*
-* @author zhangtao
-*
-* MSN & Mail: zht_dream@hotmail.com
-*/
 package ui.tab.title;
 
 import java.awt.BorderLayout;
@@ -21,24 +15,6 @@ import java.awt.event.MouseMotionListener;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-/*
- 
- 最近一直在做Flex，晚上看看世界杯，一些比赛真的很没劲，so，就想写写Swing，想起以前有人问过如何替换JFrame或者JDialog的标题栏，就动手写了写
- 
- 提供了TitleFrame和TitleDialog两个顶层组件，
- 主要功能:
- 1、自定义标题栏
- 2、可以通过鼠标拖拽调整组件大小(可关闭resize功能)
- 3、设置图标和显示文字(文字可居中)
- 4、自定义右键菜单。
- 
- 解决了经常问到的以下问题:
- 
- 如何替换/自定义 JFrame/JDialog标题栏
-setUndecorated后，如何调整JFrame/JDialog大小
- 自定义JFrame/JDialog最大化/最小化/关闭按钮
- 
- */
 public class TitleFrame extends JFrame {
 
 	public TitleFrame() throws HeadlessException {

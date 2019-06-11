@@ -1,9 +1,3 @@
-/*
-*
-* @author zhangtao
-*
-* MSN & Mail: zht_dream@hotmail.com
-*/
 package ui.tab.title;
 
 import java.awt.BorderLayout;
