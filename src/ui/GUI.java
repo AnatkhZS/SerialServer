@@ -29,9 +29,9 @@ import bl.session.SessionEvent;
 import bl.session.SessionEventHandler;
 import bl.session.SessionManager;
 import info.clearthought.layout.TableLayout;
-import zht.tab.Tab;
-import zht.tab.ZHTChromeTabbedPane;
-import zht.tab.ZHTTabbedPane;
+import ui.tab.tab.Tab;
+import ui.tab.tab.ChromeTabbedPane;
+import ui.tab.tab.TabbedPane;
 
 public class GUI {
 	private final int MAX_LINE_COUNT = 200;
@@ -45,7 +45,7 @@ public class GUI {
 	private JButton disConnectButton;
 	private JButton optionsButton;
 	private JTextField logPathField = new JTextField();
-	private ZHTTabbedPane tabPane;
+	private TabbedPane tabPane;
 	
 	private String serialPort;
 	private int buadrate;
@@ -76,8 +76,10 @@ public class GUI {
 		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		frame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
-				configHandler.save();
-				serialServer.destroyServer();
+				try {
+					configHandler.save();
+					serialServer.destroyServer();
+				}catch(Exception e1) {}
 				System.exit(0);
 			}
 		});
@@ -85,7 +87,7 @@ public class GUI {
 		frame.setLocationRelativeTo(null);
 		
 		JPanel panel = new JPanel();
-		tabPane = new ZHTChromeTabbedPane();
+		tabPane = new ChromeTabbedPane();
 		tabPane.addListener(new MyHandler() {
 			public void removeTab(RemoveTabEvent e) {}
 			public void selectTab(SelectTabEvent e) {
