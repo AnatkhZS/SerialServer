@@ -35,10 +35,10 @@ import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-import ui.MyHandler;
-import ui.RemoveTabEvent;
-import ui.SelectTabEvent;
 import ui.tab.about.AboutDialog;
+import ui.tab.event.MyHandler;
+import ui.tab.event.RemoveTabEvent;
+import ui.tab.event.SelectTabEvent;
 import ui.tab.tab.interaction.DefaultInputHanlder;
 import ui.tab.tab.interaction.MoveInputHanlder;
 import ui.tab.tab.interaction.PopupMenuInputHanlder;

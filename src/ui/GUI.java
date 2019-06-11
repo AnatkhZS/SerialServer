@@ -30,6 +30,9 @@ import bl.session.SessionEventHandler;
 import bl.session.SessionManager;
 import info.clearthought.layout.TableLayout;
 import ui.tab.tab.Tab;
+import ui.tab.event.MyHandler;
+import ui.tab.event.RemoveTabEvent;
+import ui.tab.event.SelectTabEvent;
 import ui.tab.tab.ChromeTabbedPane;
 import ui.tab.tab.TabbedPane;
 

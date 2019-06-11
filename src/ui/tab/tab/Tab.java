@@ -7,8 +7,8 @@ import java.util.Set;
 import javax.swing.Icon;
 import javax.swing.JLabel;
 
-import ui.MyHandler;
-import ui.RemoveTabEvent;
+import ui.tab.event.MyHandler;
+import ui.tab.event.RemoveTabEvent;
 
 public class Tab {
 	private Component component;

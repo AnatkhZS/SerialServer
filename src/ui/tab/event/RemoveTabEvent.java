@@ -1,4 +1,4 @@
-package ui;
+package ui.tab.event;
 
 import java.util.EventObject;
 
