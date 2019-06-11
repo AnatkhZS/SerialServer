@@ -15,25 +15,16 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import com.fazecast.jSerialComm.SerialPort;
 
 import bl.ConfigHandler;
+import bl.SerialServer;
 import bl.session.SerialSession;
-import bl.session.Session;
+import bl.session.Session;           
 import bl.session.SessionEvent;
 import bl.session.SessionEventHandler;
 import bl.session.SessionManager;
@@ -43,11 +34,9 @@ import zht.tab.ZHTChromeTabbedPane;
 import zht.tab.ZHTTabbedPane;
 
 public class GUI {
-	private final int MAX_LINE_COUNT = 1000;
-	private int SERVER_PORT = 9428;
-	private String CONFIG_PATH = "config.json";
-	private String REQUEST_SPLITER = "@";
-	private DatagramSocket server;
+	private final int MAX_LINE_COUNT = 200;
+	private final String CONFIG_PATH = "config.json";
+	private SerialServer serialServer;
 	private RecordTextArea inputTextArea;
 	private Session currentSession;
 	private ConfigHandler configHandler;
@@ -74,12 +63,11 @@ public class GUI {
 				setButtonStatus();
 			}});
 		configHandler = new ConfigHandler(CONFIG_PATH);
+		serialServer = new SerialServer();
+		serialServer.createServer();
 		GUICreator c = new GUICreator();
 		Thread guiThread = new Thread(c);
 		guiThread.start();
-		Server s = new Server();
-		Thread serverThread = new Thread(s);
-		serverThread.start();
 	}
 	
 	private void createGUI() {
@@ -89,7 +77,7 @@ public class GUI {
 		frame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
 				configHandler.save();
-				server.close();
+				serialServer.destroyServer();
 				System.exit(0);
 			}
 		});
@@ -99,12 +87,7 @@ public class GUI {
 		JPanel panel = new JPanel();
 		tabPane = new ZHTChromeTabbedPane();
 		tabPane.addListener(new MyHandler() {
-
-			@Override
-			public void removeTab(RemoveTabEvent e) {
-			}
-
-			@Override
+			public void removeTab(RemoveTabEvent e) {}
 			public void selectTab(SelectTabEvent e) {
 				currentSession = sessionManager.getSession(e.getSessionId());
 				setButtonStatus();
@@ -113,7 +96,6 @@ public class GUI {
 		inputTextArea = new RecordTextArea();
 		inputTextArea.setLineWrap(true);
 		inputTextArea.addKeyListener(new KeyListener() {
-		    @Override
 		    public void keyPressed(KeyEvent e) {
 		    	int keyCode = e.getKeyCode();
 		    	if(keyCode == '\n'){
@@ -131,20 +113,13 @@ public class GUI {
 		        	inputTextArea.setText(inputTextArea.forward());
 		        }
 		    }
-		 
-		    @Override
 		    public void keyReleased(KeyEvent e) {
 		    	int key = e.getKeyCode();
 		        if(key == '\n'){
 		        	inputTextArea.setText(null);
 		        }
 		    }
-		 
-		    @Override
-		    public void keyTyped(KeyEvent e) {
-		    	
-		    }
-
+		    public void keyTyped(KeyEvent e) {}
 		});
 		JScrollPane inputScrollPane = new JScrollPane(inputTextArea);
 		
@@ -610,39 +585,5 @@ public class GUI {
 			DisplayLog dl = new DisplayLog(serialSession, showTextArea);
 			new Thread(dl).start();
 		}	
-	}
-	
-	private class Server implements Runnable{
-
-		@Override
-		public void run() {
-			try {
-				server = new DatagramSocket(SERVER_PORT);
-				while(true) {
-					byte[] container = new byte[1024];
-					DatagramPacket packet = new DatagramPacket(container, container.length);
-					try {
-						server.receive(packet);
-					}catch(java.net.SocketException e) {
-						break;
-					}
-					byte[] data = packet.getData();
-					int len = packet.getLength();
-					String request = new String(data, 0, len);
-					//request format: "port@cmd"
-					System.out.println(request);
-					int sessionId = Integer.valueOf(request.split(REQUEST_SPLITER)[0]);
-					String cmd = request.split(REQUEST_SPLITER)[1];
-					Session session = sessionManager.getSession(sessionId);
-					if(session != null) {
-						for(char c:cmd.toCharArray())
-							session.write(c);
-					}
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		
 	}
 }
