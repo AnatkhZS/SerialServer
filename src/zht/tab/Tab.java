@@ -21,6 +21,7 @@ public class Tab {
 	private boolean closeAble = true;
 	private Icon icon;
 	private String title;
+	private int id;
 	
 	private Set<MyHandler> eventListeners = new LinkedHashSet<MyHandler>();
 	
@@ -44,11 +45,12 @@ public class Tab {
 		}
 	}
 
-	public Tab(Component component, boolean closeAble, Icon icon, String title) {
+	public Tab(Component component, boolean closeAble, Icon icon, int id, String title) {
 		super();
 		this.component = component;
 		this.closeAble = closeAble;
 		this.icon = icon;
+		this.id = id;
 		this.title = title;
 	}
 
@@ -73,6 +75,10 @@ public class Tab {
 
 	public Icon getIcon() {
 		return icon;
+	}
+	
+	public int getId() {
+		return id;
 	}
 
 	public String getTitle() {

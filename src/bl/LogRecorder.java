@@ -7,19 +7,21 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-import data.SerialHandler;
+import bl.session.SerialSession;
+import bl.session.Session;
+import data.SerialDataHandler;
 
 public class LogRecorder {
-	private SerialSession serialSession;
+	private Session session;
 	private String fileName;
 	private boolean isStartAtMidnight;
 	private boolean isAppendToFile;
 	
-	public LogRecorder(SerialSession serialSession) {
-		this.serialSession = serialSession;
-		this.fileName = serialSession.getLogPath();
-		this.isStartAtMidnight = serialSession.isStartAtMidnight();
-		this.isAppendToFile = serialSession.isAppendToFile();
+	public LogRecorder(Session session) {
+		this.session = session;
+		this.fileName = session.getLogPath();
+		this.isStartAtMidnight = session.isStartAtMidnight();
+		this.isAppendToFile = session.isAppendToFile();
 	}
 	
 	public File fileInit(String fileName) {
@@ -61,7 +63,7 @@ public class LogRecorder {
 			File logFile = fileInit(fileName.replace("%M", monthStr).replace("%D", dayStr));
 			try {
 				FileWriter writer = new FileWriter(logFile, true);
-				while(!serialSession.isStop()) {
+				while(!session.isStop()) {
 					if(isStartAtMidnight) {
 						String currenDate;
 						if((currenDate=getDate())!=date) {
@@ -72,7 +74,7 @@ public class LogRecorder {
 							writer = new FileWriter(logFile, true);
 						}
 					}
-					String line = serialSession.readLine(1);
+					String line = session.readLine(1);
 					if(line!=null) {
 						writer.write(line);
 						writer.flush();

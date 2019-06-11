@@ -216,7 +216,7 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 	}
 
 	public void closeTab(Tab tab) {
-		tab.trigger(new RemoveTabEvent(this, tab.getTitle()));
+		tab.trigger(new RemoveTabEvent(this, tab.getId(), tab.getTitle()));
 		if (tab.isCloseAble()) {
 			int index = tabList.indexOf(tab);
 			tabViewMap.remove(tab);
@@ -590,7 +590,7 @@ public abstract class ZHTTabbedPane extends JLayeredPane {
 			return;
 		}
 		if (this.selectedTab != tab) {
-			this.trigger(new SelectTabEvent(this, tab.getTitle()));
+			this.trigger(new SelectTabEvent(this,tab.getId(), tab.getTitle()));
 			this.selectedTab = tab;
 			this.contentPanel.removeAll();
 			this.contentPanel.add(tab.getComponent(), BorderLayout.CENTER);

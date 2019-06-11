@@ -4,14 +4,14 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
-import data.SerialHandler;
+import data.SerialDataHandler;
 
 public class SerialServer {
 	private int serverPort = 9428;
-	private SerialHandler sh;
+	private SerialDataHandler sh;
 	private boolean isStop = false;
 	
-	public SerialServer(SerialHandler sh) {
+	public SerialServer(SerialDataHandler sh) {
 		this.sh = sh;
 	}
 	

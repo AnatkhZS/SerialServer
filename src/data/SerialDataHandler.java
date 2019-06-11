@@ -1,8 +1,6 @@
 package data;
 
-import bl.SerialSession;
-
-public class SerialHandler {
+public class SerialDataHandler implements DataHandler{
 	private int readBufferSize = 1024*1024;
 	private int writeBufferSize = 1024;
 	private RingBuffer<byte[]> readBuffer;
@@ -15,7 +13,7 @@ public class SerialHandler {
 	private int buadrate;
 	private boolean isStop = false;
 	
-	public SerialHandler(String serialPort, int buadrate){
+	public SerialDataHandler(String serialPort, int buadrate){
 		this.readBuffer = new RingBuffer<byte[]>(readBufferSize);
 		this.displayBuffer = new RingBuffer<String>(readBufferSize);
 		this.logBuffer = new RingBuffer<String>(readBufferSize);

@@ -42,13 +42,13 @@ public class TabConfigPanel extends JPanel {
 
 	private void initGUI() {
 		JPanel panel = new ColorPanel(pane);
-		Tab tab = new Tab(panel, false, null, "Color");
+		Tab tab = new Tab(panel, false, null, -1, "Color"); //-1 is compatible with sessionId
 		configPane.addTab(tab);
 		panel = new BooleanPanel(pane);
-		tab = new Tab(panel, false, null, "Boolean");
+		tab = new Tab(panel, false, null, -1, "Boolean"); //-1 is compatible with sessionId
 		configPane.addTab(tab);
 		panel = new NumberPanel(pane);
-		tab = new Tab(panel, false, null, "Number");
+		tab = new Tab(panel, false, null, -1, "Number"); //-1 is compatible with sessionId
 		configPane.addTab(tab);
 		this.setLayout(new BorderLayout());
 		this.add(configPane, BorderLayout.CENTER);

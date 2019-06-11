@@ -1,52 +1,61 @@
-package bl;
+package bl.session;
 
-import data.SerialHandler;
+import bl.LogRecorder;
+import data.DataHandler;
 
-public class SerialSession {
-	private String serialPort;
-	private int buadrate;
+public class Session {
+	private int sessionId;
+	private String name;
 	private String logPath;
 	private boolean isRecord;
 	private boolean isStartAtMidnight;
 	private boolean isAppendToFile;
-	private SerialHandler serialHandler;
+	private DataHandler handler;
 	
-	public SerialSession(String serialPort, int buadrate, String logPath, boolean isRecord, boolean isStartAtMidnight, boolean isAppendToFile) {
-		this.serialPort = serialPort;
-		this.buadrate = buadrate;
+	public Session(int sessionId, String name, String logPath, boolean isRecord, boolean isStartAtMidnight, boolean isAppendToFile, DataHandler handler) {
+		this.sessionId = sessionId;
+		this.name = name;
 		this.logPath = logPath;
 		this.isRecord = isRecord;
 		this.isStartAtMidnight = isStartAtMidnight;
 		this.isAppendToFile = isAppendToFile;
-		serialHandler = new SerialHandler(serialPort, buadrate);
+		this.handler = handler;
+		this.record();
+	}
+	
+	private void record() {
+		if(this.isRecord()) {
+			LogRecorder lr = new LogRecorder(this);
+			lr.startRecord();
+		}
 	}
 	
 	public boolean isStop() {
-		return serialHandler.isStop();
+		return handler.isStop();
 	}
 	
 	public void setStop() {
-		serialHandler.setStop();
+		handler.setStop();
 	}
 	
 	public void reconnect() {
-		serialHandler.reconnect();
+		handler.reconnect();
 	}
 	
 	public String readLine(int type){
-		return serialHandler.readLine(type);
+		return handler.readLine(type);
 	}
 	
 	public void write(char c){
-		serialHandler.write(c);
+		handler.write(c);
 	}
 	
-	public String getSerialPort() {
-		return this.serialPort;
+	public int getSesionId() {
+		return this.sessionId;
 	}
 	
-	public int getBuadrate() {
-		return this.buadrate;
+	public String getName() {
+		return this.name;
 	}
 	
 	public String getLogPath() {
@@ -65,14 +74,6 @@ public class SerialSession {
 		return this.isAppendToFile;
 	}
 	
-	public void setSerialPort(String serialPort) {
-		this.serialPort = serialPort;
-	}
-	
-	public void setBuadrate(int buadrate) {
-		this.buadrate = buadrate;
-	}
-	
 	public void setLogPath(String logPath) {
 		this.logPath = logPath;
 	}
@@ -88,4 +89,5 @@ public class SerialSession {
 	public void setAppendToFile(boolean isAppendToFile) {
 		this.isAppendToFile = isAppendToFile;
 	}
+	
 }

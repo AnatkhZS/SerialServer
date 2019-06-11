@@ -3,14 +3,15 @@ package bl;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Properties;
 
-import data.SerialHandler;
+import data.SerialDataHandler;
 
 public class Test {
 	public static void main(String args[]) throws InterruptedException {
-		Integer[] intArray = {1,2,3};
-		int a = 3;
-		System.out.println(new Test().index(intArray, a));
+		Properties props = System.getProperties();
+		String osName = props.getProperty("os.name");
+		System.out.println(osName);
 	}
 	
 	private int index(Object[] buadrateList, Object value) {

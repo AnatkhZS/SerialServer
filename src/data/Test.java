@@ -7,16 +7,10 @@ import com.fazecast.jSerialComm.*;
 
 public class Test {
 	public static void main(String args[]) {
-//		SerialPort[] lst = SerialPort.getCommPorts();
-//		for(SerialPort sp:lst) {
-//			System.out.println(sp.getPortDescription());
-//		}
-//		Properties props = System.getProperties();
-//		System.out.println(props.getProperty("os.name"));
-//		for(String s :new Test().getSerialPortList())
-//			System.out.println(s);
-//		SerialOpener serial1 = new SerialOpener("/dev/cu.SLAB_USBtoUART", 57600);
-//		SerialOpener serial2 = new SerialOpener("/dev/cu.SLAB_USBtoUART", 57600);
+		SerialPort[] lst = SerialPort.getCommPorts();
+		for(SerialPort port:lst) {
+			System.out.println(port.getDescriptivePortName());
+		}
 	}
 	
 	public String[] getSerialPortList() {
