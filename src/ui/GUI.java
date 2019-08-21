@@ -518,7 +518,8 @@ public class GUI {
 					if(line!=null) {
 						showTextArea.append(line);
 						if(!isScrollBarClicked)
-							showTextArea.setCaretPosition(showTextArea.getText().length());
+							showTextArea.setCaretPosition(showTextArea.getDocument().getLength());
+//							showTextArea.setCaretPosition(showTextArea.getText().length());
 					}
 				}
 				try {

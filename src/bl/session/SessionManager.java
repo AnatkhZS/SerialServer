@@ -68,6 +68,14 @@ public class SessionManager {
 		return false;
 	}
 	
+	public int getSessionId(String name) {
+		for(Session s:sessionMap.values()) {
+			if(s.getName().equals(name))
+				return s.getSesionId();
+		}
+		return -1;
+	}
+	
 	public Set<Integer> getSessionList() {
 		return sessionMap.keySet();
 	}

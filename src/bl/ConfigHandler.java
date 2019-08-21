@@ -24,7 +24,6 @@ public class ConfigHandler {
 			br.close();
 			root = new JSONObject(data);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

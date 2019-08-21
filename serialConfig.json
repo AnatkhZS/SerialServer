@@ -1,0 +1,9 @@
+{
+	"aok2jiaek0pr6hnt":
+		{
+			"serialPort":"cu.SLAB_USBtoUART", 
+			"username":"root", 
+			"password":"tycam@SC002r", 
+			"resetCmds":["killall -9 tycam", "rm /etc/tuya/tuya_user.*", "reboot"]
+		}
+}
