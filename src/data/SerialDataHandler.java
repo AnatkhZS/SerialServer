@@ -139,7 +139,7 @@ public class SerialDataHandler implements DataHandler{
 					charList[i] = c;
 					i++;
 					if(c=='\n') {
-						String cmd = String.valueOf(charList).split("\n")[0]+"\n";
+						String cmd = String.valueOf(charList).split("\n")[0]+"\r\n";
 						i = 0;
 						charList = new char[1024];
 						serial.write(cmd);

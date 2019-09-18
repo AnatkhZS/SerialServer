@@ -173,17 +173,31 @@ public class SerialServer {
             return result;
         }
         final String[] items = formData.split("&");
-        Arrays.stream(items).forEach(item ->{
-            final String[] keyAndVal = item.split("=");
-            if( keyAndVal.length == 2) {
-                try{
-                    final String key = URLDecoder.decode( keyAndVal[0],"utf8");
-                    final String val = URLDecoder.decode( keyAndVal[1],"utf8");
-                    result.put(key,val);
-                }catch (UnsupportedEncodingException e) {}
-            }
-        });
+        for(String item:items) {
+        	char[] charArray = item.toCharArray();
+        	for(int i=0;i<charArray.length;i++) {
+        		if(charArray[i]=='=') {
+        			try {
+        				String key = URLDecoder.decode(new String(Arrays.copyOfRange(charArray, 0, i)),"utf8");
+        				String val = URLDecoder.decode(new String(Arrays.copyOfRange(charArray, i+1, charArray.length)),"utf8");
+        				result.put(key,val);
+        				break;
+        			}catch (UnsupportedEncodingException e) {}
+        		}
+        	}
+        }
         return result;
+//        Arrays.stream(items).forEach(item ->{
+//            final String[] keyAndVal = item.split("=");
+//            if( keyAndVal.length == 2) {
+//                try{
+//                    final String key = URLDecoder.decode( keyAndVal[0],"utf8");
+//                    final String val = URLDecoder.decode( keyAndVal[1],"utf8");
+//                    result.put(key,val);
+//                }catch (UnsupportedEncodingException e) {}
+//            }
+//        });
+//        return result;
     }
 	
 	public void destroyServer() {
