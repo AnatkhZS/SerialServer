@@ -94,8 +94,8 @@ public abstract class TabbedPane extends JLayeredPane {
 	private Set<MyHandler> eventListeners = new LinkedHashSet<MyHandler>();
 
 	public TabbedPane() {
-		closeIcon = new ImageIcon(this.getClass().getResource("close.png"));
-		closingIcon = new ImageIcon(this.getClass().getResource("closing.png"));
+		closeIcon = new ImageIcon("res/close.png");
+		closingIcon = new ImageIcon("res/closing.png");
 		this.setLayout(null);
 		this.add(contentPanel, new Integer(0));
 		installListener();

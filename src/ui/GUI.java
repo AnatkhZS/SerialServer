@@ -569,17 +569,17 @@ public class GUI {
 					try {
 						sessionManager.getSession(sessionId).setStop();
 						Thread.sleep(100);
+						toDeleteArray[0].setVisible(false);
+						toDeleteArray[0] = null;
+						tabPane.removeTab(serialSession.getSerialPort());
+						sessionManager.destroySession(sessionId);
+						Tab currentTab = tabPane.getSelectedTab();
+						currentSession = sessionManager.getSession(currentTab.getId());
 					} catch(java.lang.NullPointerException e1) {
 						System.out.println("ERROR, Map size: " + sessionManager.size());
 					}catch (InterruptedException e2) {
 						e2.printStackTrace();
 					}
-					toDeleteArray[0].setVisible(false);
-					toDeleteArray[0] = null;
-					tabPane.removeTab(serialSession.getSerialPort());
-					sessionManager.destroySession(sessionId);
-					Tab currentTab = tabPane.getSelectedTab();
-					currentSession = sessionManager.getSession(currentTab.getId());
 				}
 
 				@Override

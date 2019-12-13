@@ -1,8 +1,10 @@
 package bl;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -17,8 +19,10 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 
 import bl.session.Session;
 import bl.session.SessionManager;
@@ -49,6 +53,7 @@ public class SerialServer {
 		cmdServer.createContext("/ipc/WriteCMD", new WriteCMDHandler());
 		cmdServer.createContext("/ipc/GetSerialList", new GetSerialListHandler());
 		cmdServer.createContext("/ipc/resetDevice", new ResetDeviceHandler());
+		cmdServer.createContext("/ipc/connectServer", new ConnectServerHandler());
 		cmdServer.start();
 	}
 	
@@ -88,6 +93,7 @@ public class SerialServer {
 				datas.put(data);
 			}
 			JSONObject response = formatResponse(true, 1, "", datas);
+			exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*"); //支持跨域访问
 			exchange.sendResponseHeaders(200, 0);
             OutputStream os = exchange.getResponseBody();
             os.write(response.toString().getBytes());
@@ -145,6 +151,134 @@ public class SerialServer {
         }
     }
 	
+	public class ConnectServerHandler implements HttpHandler{
+
+		@Override
+		public void handle(HttpExchange exchange) throws IOException {
+			String queryString =  exchange.getRequestURI().getQuery();
+//			String serverIP = exchange.getRemoteAddress().getHostString();
+        	Map<String, String> queryDict = formData2Dic(queryString);
+        	String serverIP = queryDict.get("serverIP");
+    		int serverPort = Integer.valueOf(queryDict.get("serverPort"));
+    		int taskId = Integer.valueOf(queryDict.get("taskId"));
+    		int serialPort = Integer.valueOf(queryDict.get("serialPort"));
+    		System.out.println(serverIP+" "+serverPort+" "+taskId+" "+serialPort);
+    		new Thread(new Client(serverIP, serverPort, taskId, serialPort)).start();
+    		exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*"); //支持跨域访问
+    		exchange.sendResponseHeaders(200, 0);
+            OutputStream os = exchange.getResponseBody();
+            os.write("OK".getBytes());
+            os.close();
+		}
+	}
+	
+	private class Client implements Runnable{
+		private String serverIP;
+		private int serverPort;
+		private int taskId;
+		private int serialPort;
+		private boolean isStop = false;
+		
+		public Client(String serverIP, int serverPort, int taskId, int serialPort) {
+			this.serverIP = serverIP;
+			this.serverPort = serverPort;
+			this.taskId = taskId;
+			this.serialPort = serialPort;
+		}
+
+		@Override
+		public void run() {
+			Socket client = new Socket();
+			try {
+				client.connect(new InetSocketAddress(serverIP, serverPort));
+				new Thread(new SocketReader(client)).start();
+				new Thread(new SessionChecker(serialPort)).start();
+				BufferedWriter socketWriter = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
+				socketWriter.write("{\"command\":\"connect\", \"taskId\":\""+taskId+"\"}");
+				socketWriter.flush();
+				System.out.println("Connect msg sent");
+				Thread.sleep(1000*30);
+				while(!isStop) {
+					socketWriter.write("{\"command\":\"keepAlive\"}");
+					socketWriter.flush();
+					System.out.println("Keep alive msg sent");
+					Thread.sleep(1000*30);
+				}
+				client.close();
+				System.out.println("Client closed");
+			} catch (IOException | InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		private class SocketReader implements Runnable{
+			private Socket socket;
+			
+			public SocketReader(Socket socket) {
+				this.socket = socket;
+			}
+			
+			@Override
+			public void run() {
+				try {
+					BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+					while(!isStop) {
+						String msg = "";
+						try {
+							msg = socketReader.readLine();
+						}catch(Exception e) {
+							if(!isStop)
+								break;
+							else
+								throw e;
+						}
+						if(msg==null) {
+							isStop = true;
+							break;
+						}
+						System.out.println(msg);
+						JSONObject msgDict = new JSONObject(msg);
+						String cmdType = msgDict.getString("commandType");
+						if(cmdType.equals("command")){
+							String cmdContent = msgDict.getString("content");
+							Session session = sessionManager.getSession(serialPort);
+							for(char c:cmdContent.toCharArray())
+		    					session.write(c);
+		    				session.write('\n');
+						}else if(cmdType.equals("disconnect")) {
+							isStop = true;
+						}
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		private class SessionChecker implements Runnable{
+			private int serialPort;
+			
+			public SessionChecker(int serialPort) {
+				this.serialPort = serialPort;
+			}
+			
+			@Override
+			public void run() {
+				while(!isStop) {
+					try {
+						Thread.sleep(3*1000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					if(!sessionManager.contains(serialPort)) {
+						isStop = true;
+						System.out.println("Session closed");
+					}
+				}
+			}
+		}
+	}
+	
 	public static JSONObject getSessionInfoByPid(String pid) throws Exception{
 		BufferedReader br = new BufferedReader(new FileReader(SERIALCONFIG));
 		String data = "";
@@ -164,8 +298,6 @@ public class SerialServer {
 		response.put("datas", data);
 		return response;
 	}
-	
-	
 	
 	public static Map<String,String> formData2Dic(String formData ) {
         Map<String,String> result = new HashMap<>();
@@ -187,17 +319,6 @@ public class SerialServer {
         	}
         }
         return result;
-//        Arrays.stream(items).forEach(item ->{
-//            final String[] keyAndVal = item.split("=");
-//            if( keyAndVal.length == 2) {
-//                try{
-//                    final String key = URLDecoder.decode( keyAndVal[0],"utf8");
-//                    final String val = URLDecoder.decode( keyAndVal[1],"utf8");
-//                    result.put(key,val);
-//                }catch (UnsupportedEncodingException e) {}
-//            }
-//        });
-//        return result;
     }
 	
 	public void destroyServer() {
@@ -206,48 +327,6 @@ public class SerialServer {
 		dataServer.close();
 	}
 
-//	private class CreateCMDServer implements Runnable{
-//		@Override
-//		public void run() {
-//			try {
-//				cmdServer = new DatagramSocket(CMD_SERVER_PORT);
-//				while(true) {
-//					byte[] container = new byte[1024];
-//					DatagramPacket packet = new DatagramPacket(container, container.length);
-//					int port;
-//					InetAddress address;
-//					try {
-//						cmdServer.receive(packet);
-//						port = packet.getPort();
-//						address = packet.getAddress();
-//					}catch(java.net.SocketException e) {
-//						break;
-//					}
-//					byte[] data = packet.getData();
-//					int len = packet.getLength();
-//					String request = new String(data, 0, len);
-//					if(request.equals(REQUEST_SESSIONID_LIST)) {
-//						Set<Integer> sessionIdSet = sessionManager.getSessionList();
-//						String retStr = sessionIdSet.toString();
-//						DatagramPacket sendPacket = new DatagramPacket(retStr.getBytes(), retStr.getBytes().length, address, port);
-//						cmdServer.send(sendPacket);
-//					}else {
-//						//request format: "sessionid@cmd"
-//						int sessionId = Integer.valueOf(request.split(REQUEST_SPLITER)[0]);
-//						String cmd = request.split(REQUEST_SPLITER)[1];
-//						Session session = sessionManager.getSession(sessionId);
-//						if(session != null) {
-//							for(char c:cmd.toCharArray())
-//								session.write(c);
-//						}
-//					}
-//				}
-//			} catch (IOException e) {
-//				e.printStackTrace();
-//			}
-//		}
-//	}
-	
 	private class CreateDataServer implements Runnable{
 		private List<HashMap<String, Object>> clientEndpointList;
 		private List<Integer> querySessionList;

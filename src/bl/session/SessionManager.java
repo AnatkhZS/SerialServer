@@ -68,6 +68,14 @@ public class SessionManager {
 		return false;
 	}
 	
+	public boolean contains(int serialPort) {
+		for(int key:sessionMap.keySet()) {
+			if(key==serialPort)
+				return true;
+		}
+		return false;
+	}
+	
 	public int getSessionId(String name) {
 		for(Session s:sessionMap.values()) {
 			if(s.getName().equals(name))

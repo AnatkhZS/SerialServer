@@ -40,8 +40,8 @@ public class LogRecorder {
 	
 	public void startRecord() {
 		Record r = new Record();
-		Thread recordeThread = new Thread(r);
-		recordeThread.start();
+		Thread recordThread = new Thread(r);
+		recordThread.start();
 	}
 	
 	private String getDate() {
@@ -63,6 +63,7 @@ public class LogRecorder {
 			File logFile = fileInit(fileName.replace("%M", monthStr).replace("%D", dayStr));
 			try {
 				FileWriter writer = new FileWriter(logFile, true);
+				SimpleDateFormat dateFormat= new SimpleDateFormat("[hh:mm:ss]");
 				while(!session.isStop()) {
 					if(isStartAtMidnight) {
 						String currenDate;
@@ -74,9 +75,18 @@ public class LogRecorder {
 							writer = new FileWriter(logFile, true);
 						}
 					}
-					String line = session.readLine(1);
-					if(line!=null) {
-						writer.write(line);
+					String lines = session.readLine(1);
+					if(lines!=null) {
+						boolean isEndLine = true;
+						String[] lineArray = lines.split("\r\n");
+						for(int i=0;i<lineArray.length;i++) {
+							if(i==0 && !isEndLine) {
+								writer.write(lineArray[i]+"\r\n");
+							}else {
+								writer.write(dateFormat.format(new Date())+lineArray[i]+"\r\n");
+							}
+						}
+						isEndLine = lines.endsWith("\n");
 						writer.flush();
 					}
 					Thread.sleep(10);

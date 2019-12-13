@@ -1,9 +1,23 @@
 {
 	"aok2jiaek0pr6hnt":
 		{
-			"serialPort":"cu.SLAB_USBtoUART", 
+			"serialPort":"cu.SLAB_USBtoUART59", 
 			"username":"root", 
 			"password":"tycam@SC002r", 
+			"resetCmds":["killall -9 tycam", "rm /etc/tuya/tuya_user.*", "reboot"]
+		},
+	"nxnvprhxdf3j3mub":
+		{
+			"serialPort":"cu.SLAB_USBtoUART41", 
+			"username":"root", 
+			"password":"tycam@SC002r", 
+			"resetCmds":["killall -9 tycam", "rm /etc/tuya/tuya_user.*", "reboot"]
+		},
+	"wxioatlk8dgres82":
+		{
+			"serialPort":"cu.SLAB_USBtoUART", 
+			"username":"root", 
+			"password":"GXKX34CXi2VxZhL0KThby7pBwy26rpiN", 
 			"resetCmds":["killall -9 tycam", "rm /etc/tuya/tuya_user.*", "reboot"]
 		}
 }

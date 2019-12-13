@@ -120,7 +120,12 @@ public class SerialDataHandler implements DataHandler{
 		
 		private String rim(byte[] content) {
 			String result = new String(content);
-			result.replaceAll("\r\r\n", "\r\n");
+			String spliter = "&()H&^%";
+			result.replaceAll("\r\r\n", spliter);
+			result.replaceAll("\r\n", spliter);
+			result.replaceAll("\r", spliter);
+			result.replaceAll("\n", spliter);
+			result.replaceAll(spliter, "\r\n");
 			return result;
 		}
 		
