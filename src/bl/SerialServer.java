@@ -34,6 +34,7 @@ public class SerialServer {
 	private final String REQUEST_SPLITER = "@@";
 //	private final String REQUEST_SESSIONID_LIST = "getSessionIdList";
 	private final String ESTABLISH_CONNECTION = "establishConnection";
+	private final String KEEP_ALIVE = "keepAlive";
 	private final String ESTABLISHED = "established";
 	private final static String SERIALCONFIG = "serialConfig.json";
 //	private DatagramSocket cmdServer;
@@ -340,26 +341,28 @@ public class SerialServer {
 				e.printStackTrace();
 			}
 		}
+		
+		private int getCurrentTimestamp() {
+			return (int)new Date().getTime()/1000;
+		}
 
 		@Override
 		public void run() {
 			new Thread(new ConnectionListener()).start();
-			HashMap<Integer, String> msgMap = new HashMap<Integer, String>();
+			new Thread(new EndpointTimeChecker()).start();
 			while(true) {
-				for(Integer sessionId:querySessionList) {
-					Session session = sessionManager.getSession(sessionId);
-					msgMap.put(sessionId, session.readLine(2));
-				}
 				for(HashMap<String, Object> endpoint:clientEndpointList) {
 					int sessionId = (int)endpoint.get("sessionId");
 					InetAddress address = (InetAddress)endpoint.get("address");
 					int port = (int)endpoint.get("port");
-					String msg = msgMap.get(sessionId);
-					DatagramPacket sendPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, address, port);
-					try {
-						dataServer.send(sendPacket);
-					} catch (IOException e) {
-						e.printStackTrace();
+					String msg = sessionManager.getSession(sessionId).readLine(2);
+					if(msg != null) {
+						DatagramPacket sendPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, address, port);
+						try {
+							dataServer.send(sendPacket);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
 					}
 				}
 				try {
@@ -367,6 +370,25 @@ public class SerialServer {
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+				}
+			}
+		}
+		
+		private class EndpointTimeChecker implements Runnable{
+			public void run() {
+				while(true) {
+					for(HashMap<String, Object> endpoint:clientEndpointList) {
+						if(getCurrentTimestamp()-(int)endpoint.get("activeTime")>20) {
+							clientEndpointList.remove(endpoint);
+							break;
+						}
+					}
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 			}
 		}
@@ -394,13 +416,20 @@ public class SerialServer {
 						String cmd = request.split(REQUEST_SPLITER)[1];
 						if(cmd.equals(ESTABLISH_CONNECTION)) {
 							HashMap<String, Object> endpoint = new HashMap<String, Object>();
-							endpoint.put("addr", address);
+							endpoint.put("address", address);
 							endpoint.put("port", port);
-							endpoint.put("session", sessionId);
+							endpoint.put("sessionId", sessionId);
+							endpoint.put("activeTime", getCurrentTimestamp());
 							clientEndpointList.add(endpoint);
 							querySessionList.add(sessionId);
 							DatagramPacket sendPacket = new DatagramPacket(ESTABLISHED.getBytes(), ESTABLISHED.getBytes().length, address, port);
 							dataServer.send(sendPacket);
+						}else if(cmd.equals(KEEP_ALIVE)) {
+							for(HashMap<String, Object> endpoint:clientEndpointList) {
+								if(((InetAddress)endpoint.get("address")).equals(address) && ((int)endpoint.get("port"))==port) {
+									endpoint.put("activeTime", getCurrentTimestamp());
+								}
+							}
 						}
 					}
 					

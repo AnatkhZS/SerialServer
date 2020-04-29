@@ -84,6 +84,16 @@ public class SessionManager {
 		return -1;
 	}
 	
+	public String[] getSessionNameList() {
+		String[] nameList = new String[sessionMap.values().size()];
+		int i = 0;
+		for(Session s: sessionMap.values()) {
+			nameList[i] = s.getName();
+			i++;
+		}
+		return nameList;
+	}
+	
 	public Set<Integer> getSessionList() {
 		return sessionMap.keySet();
 	}

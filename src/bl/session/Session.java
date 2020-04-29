@@ -50,6 +50,11 @@ public class Session {
 		handler.write(c);
 	}
 	
+	public synchronized void writeStr(String cmd) {
+		for(char c: cmd.toCharArray())
+			handler.write(c);
+	}
+	
 	public int getSesionId() {
 		return this.sessionId;
 	}

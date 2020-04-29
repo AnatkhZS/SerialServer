@@ -1,6 +1,7 @@
 package ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.FileDialog;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -23,6 +24,7 @@ import javax.swing.event.DocumentListener;
 
 import bl.ConfigHandler;
 import bl.SerialServer;
+import bl.TestbedClient;
 import bl.session.SerialSession;
 import bl.session.Session;           
 import bl.session.SessionEvent;
@@ -49,12 +51,22 @@ public class GUI {
 	private JButton optionsButton;
 	private JTextField logPathField = new JTextField();
 	private TabbedPane tabPane;
+	private JLabel statusLabel;
+	private JFrame mainFrame;
+	private JTextField hostTextField = null;
+	private JTextField portTextField = null;
+	private boolean needListenTestbedConnection = true;
+	private Thread testbedConnectionListener = null;
+	private int formatStringLength = 40;
+	private JButton connectButton = null;
+	private JButton disconnectButton = null;
 	
 	private String serialPort;
 	private int buadrate;
 	private String logPath;
 	
 	private SessionManager sessionManager = SessionManager.getSessionManager();
+	private TestbedClient testbedClient;
 	
 	public static void main(String args[]) {
 		new GUI().run();
@@ -64,6 +76,8 @@ public class GUI {
 		sessionManager.addListener(new SessionEventHandler() {
 			public void handle(SessionEvent e) {
 				setButtonStatus();
+				if(testbedClient!=null)
+					testbedClient.update();
 			}});
 		configHandler = new ConfigHandler(CONFIG_PATH);
 		serialServer = new SerialServer();
@@ -74,10 +88,10 @@ public class GUI {
 	}
 	
 	private void createGUI() {
-		//JFrame.setDefaultLookAndFeelDecorated(true);
-		JFrame frame = new JFrame("SerialServer");
-		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-		frame.addWindowListener(new WindowAdapter() {
+//		JFrame.setDefaultLookAndFeelDecorated(true);
+		mainFrame = new JFrame("SerialServer-Disconnected");
+		mainFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		mainFrame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
 				try {
 					configHandler.save();
@@ -86,8 +100,19 @@ public class GUI {
 				System.exit(0);
 			}
 		});
-		frame.setSize(900, 600);
-		frame.setLocationRelativeTo(null);
+		mainFrame.setSize(900, 600);
+		mainFrame.setLocationRelativeTo(null);
+		
+		JMenuBar menubar = new JMenuBar();
+		mainFrame.setJMenuBar(menubar);
+		JMenu networkMenu = new JMenu("Network");
+		menubar.add(networkMenu);
+		JMenuItem connectItem = new JMenuItem("Connect");
+		networkMenu.add(connectItem);
+		connectItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				createNetworkFrame();
+			}});
 		
 		JPanel panel = new JPanel();
 		tabPane = new ChromeTabbedPane();
@@ -109,8 +134,9 @@ public class GUI {
 		        		inputTextArea.push(line);
 		        	}
 		        	if(currentSession!=null) {
-		        		for(char c:(line+"\n").toCharArray())
-		        			currentSession.write(c);
+		        		currentSession.writeStr(line+"\n");
+//		        		for(char c:(line+"\n").toCharArray())
+//		        			currentSession.write(c);
 		        	}
 		        }else if(keyCode == KeyEvent.VK_UP) {
 		        	inputTextArea.setText(inputTextArea.backward());
@@ -203,8 +229,8 @@ public class GUI {
 		panel.setLayout(new BorderLayout());
 		panel.add(mainPane);
 		
-		frame.add(panel);
-		frame.setVisible(true);
+		mainFrame.add(panel);
+		mainFrame.setVisible(true);
 		
 		splitPane.setDividerLocation(0.7);
 		mainPane.setDividerLocation(0.1);
@@ -227,6 +253,167 @@ public class GUI {
 			disConnectButton.setEnabled(false);
 			optionsButton.setEnabled(false);
 		}
+	}
+	
+	private String formatString(String content, int length) {
+		content = " "+content;
+		while(content.length()<length) {
+			content = content+" ";
+		}
+		return content;
+	}
+	
+	private boolean isTestbedConnected() {
+		if(testbedClient==null) {
+			return false;
+		}
+		return testbedClient.isConnected();
+	}
+	
+	private void updateConnectionStatus() {
+		if(isTestbedConnected()) {
+			statusLabel.setText(formatString("Connected", formatStringLength));
+			statusLabel.setForeground(Color.BLACK);
+			mainFrame.setTitle("SerialServer-Connected");
+			disconnectButton.setEnabled(true);
+			connectButton.setEnabled(false);
+		}else {
+			statusLabel.setText(formatString("Disconnected", formatStringLength));
+			statusLabel.setForeground(Color.RED);
+			mainFrame.setTitle("SerialServer-Disconnected");
+			disconnectButton.setEnabled(false);
+			connectButton.setEnabled(true);
+		}
+	}
+	
+	private void createNetworkFrame() {
+		JFrame networkFrame = new JFrame("Network");
+		networkFrame.setSize(480,180);
+		networkFrame.setVisible(true);
+		networkFrame.setLocationRelativeTo(null);
+		double size[][] = {{TableLayout.FILL}, {0.8, 0.2}};
+		TableLayout networkFrameLayout = new TableLayout(size);
+		networkFrame.setLayout(networkFrameLayout);
+		
+		JPanel infoPanel = new JPanel();
+		GridBagLayout infoPanelLayout = new GridBagLayout();
+		infoPanel.setLayout(infoPanelLayout);
+		GridBagConstraints infoConstraints = new GridBagConstraints();
+		infoConstraints.fill = GridBagConstraints.BOTH;
+		{
+			JLabel statusLabel = new JLabel("Status: ", JLabel.RIGHT);
+			infoConstraints.gridx=0;
+			infoConstraints.gridy=0;
+			infoConstraints.gridwidth=2;                                             
+			infoConstraints.gridheight=1;            
+			infoPanelLayout.setConstraints(statusLabel, infoConstraints);
+			infoPanel.add(statusLabel);
+		}
+		{
+			statusLabel = new JLabel();
+			infoConstraints.gridx=2;
+			infoConstraints.gridy=0;
+			infoConstraints.gridwidth=12;                                             
+			infoConstraints.gridheight=1;            
+			infoPanelLayout.setConstraints(statusLabel, infoConstraints);
+			infoPanel.add(statusLabel);
+		}
+		{
+			JLabel hostLabel = new JLabel("Host: ", JLabel.RIGHT);
+			infoConstraints.gridx=0;
+			infoConstraints.gridy=1;
+			infoConstraints.gridwidth=2;                                             
+			infoConstraints.gridheight=1;            
+			infoPanelLayout.setConstraints(hostLabel, infoConstraints);
+			infoPanel.add(hostLabel);
+		}
+		{
+			hostTextField = new JTextField("172.16.209.57");
+			infoConstraints.gridx=2;
+			infoConstraints.gridy=1;
+			infoConstraints.gridwidth=12;                                             
+			infoConstraints.gridheight=1;            
+			infoPanelLayout.setConstraints(hostTextField, infoConstraints);
+			infoPanel.add(hostTextField);
+		}
+		{
+			JLabel portLabel = new JLabel("Port: ", JLabel.RIGHT);
+			infoConstraints.gridx=0;
+			infoConstraints.gridy=2;
+			infoConstraints.gridwidth=2;                                             
+			infoConstraints.gridheight=1;            
+			infoPanelLayout.setConstraints(portLabel, infoConstraints);
+			infoPanel.add(portLabel);
+		}
+		{
+			portTextField = new JTextField("54321");
+			infoConstraints.gridx=2;
+			infoConstraints.gridy=2;
+			infoConstraints.gridwidth=12;                                             
+			infoConstraints.gridheight=1;            
+			infoPanelLayout.setConstraints(portTextField, infoConstraints);
+			infoPanel.add(portTextField);
+		}
+		
+		JPanel confirmPanel = new JPanel();
+		double size2[][] = {{0.2, 0.2, 0.2, 0.2, 0.2}, {TableLayout.FILL}};
+		TableLayout comfirmTableLayout = new TableLayout(size2);
+		confirmPanel.setLayout(comfirmTableLayout);
+		JButton cancelButton = new JButton("Cancel");
+		cancelButton.addMouseListener(new MouseListener() {
+			public void mouseClicked(MouseEvent e) {
+				networkFrame.dispose();
+			}
+			public void mousePressed(MouseEvent e) {}
+			public void mouseReleased(MouseEvent e) {}
+			public void mouseEntered(MouseEvent e) {} 
+			public void mouseExited(MouseEvent e) {}
+		});
+		disconnectButton = new JButton("Disconnect");
+		disconnectButton.addMouseListener(new MouseListener() {
+			public void mouseClicked(MouseEvent e) {
+				testbedClient.disconnect();
+				needListenTestbedConnection = false;
+				try {
+					testbedConnectionListener.join();
+				} catch (InterruptedException e1) {
+					e1.printStackTrace();
+				}
+			}
+			public void mousePressed(MouseEvent e) {}
+			public void mouseReleased(MouseEvent e) {}
+			public void mouseEntered(MouseEvent e) {} 
+			public void mouseExited(MouseEvent e) {}
+		});
+		connectButton = new JButton("Connect");
+		connectButton.addMouseListener(new MouseListener() {
+			public void mouseClicked(MouseEvent e) {
+				String host = hostTextField.getText();
+				int port = Integer.valueOf(portTextField.getText());
+				testbedClient = new TestbedClient(host, port);
+				testbedClient.start();
+				new Thread(new Runnable() {
+					public void run() {
+						statusLabel.setText(formatString("connecting...", formatStringLength));
+						statusLabel.setForeground(Color.BLACK);
+					}
+				}).start();
+				needListenTestbedConnection = true;
+				testbedConnectionListener = new Thread(new TestbedConnectionListener());
+				testbedConnectionListener.start();
+			}
+			public void mousePressed(MouseEvent e) {}
+			public void mouseReleased(MouseEvent e) {}
+			public void mouseEntered(MouseEvent e) {} 
+			public void mouseExited(MouseEvent e) {}
+		});
+		updateConnectionStatus();
+		confirmPanel.add(cancelButton, "2, 0");
+		confirmPanel.add(disconnectButton, "3, 0");
+		confirmPanel.add(connectButton, "4, 0");
+		
+		networkFrame.add(infoPanel, "0, 0");
+		networkFrame.add(confirmPanel, "0, 1");
 	}
 	
 	private void createConnectionFrame(boolean isConnect) {
@@ -591,5 +778,20 @@ public class GUI {
 			DisplayLog dl = new DisplayLog(serialSession, showTextArea);
 			new Thread(dl).start();
 		}	
+	}
+	
+	private class TestbedConnectionListener implements Runnable {
+		public void run() {
+			while(needListenTestbedConnection) {
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				updateConnectionStatus();
+			}
+			updateConnectionStatus();
+		}
 	}
 }

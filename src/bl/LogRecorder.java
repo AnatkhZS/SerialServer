@@ -7,9 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-import bl.session.SerialSession;
 import bl.session.Session;
-import data.SerialDataHandler;
 
 public class LogRecorder {
 	private Session session;
@@ -63,7 +61,7 @@ public class LogRecorder {
 			File logFile = fileInit(fileName.replace("%M", monthStr).replace("%D", dayStr));
 			try {
 				FileWriter writer = new FileWriter(logFile, true);
-				SimpleDateFormat dateFormat= new SimpleDateFormat("[hh:mm:ss]");
+				SimpleDateFormat dateFormat= new SimpleDateFormat("[HH:mm:ss.SSS]");
 				while(!session.isStop()) {
 					if(isStartAtMidnight) {
 						String currenDate;
