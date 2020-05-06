@@ -184,7 +184,23 @@ public class GUI {
 		reConnectButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
 				if(reConnectButton.isEnabled()) {
-					currentSession.reconnect();
+					if(currentSession.isStop()) {
+						String serialPort = ((SerialSession)currentSession).getSerialPort();
+						int buadrate = ((SerialSession)currentSession).getBuadrate();
+						String logPath = currentSession.getLogPath();
+						boolean isRecord = currentSession.isRecord();
+						boolean isStartAtMidnight = currentSession.isStartAtMidnight();
+						boolean isAppendToFile = currentSession.isAppendToFile();
+						tabPane.removeTab(serialPort);
+						sessionManager.destroySession(currentSession.getSesionId());
+						
+						int sessionId = sessionManager.createSession(serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile);
+						SerialSession ss = (SerialSession)sessionManager.getSession(sessionId);
+						SwingUtilities.invokeLater(new SessionCreator(ss));
+						
+					}else {
+						currentSession.reconnect();
+					}
 					setButtonStatus();
 				}
 			}
@@ -708,6 +724,9 @@ public class GUI {
 							showTextArea.setCaretPosition(showTextArea.getDocument().getLength());
 //							showTextArea.setCaretPosition(showTextArea.getText().length());
 					}
+				}else {
+					setButtonStatus();
+					break;
 				}
 				try {
 					Thread.sleep(10);

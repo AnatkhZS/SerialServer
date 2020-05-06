@@ -12,6 +12,7 @@ public class SerialDataHandler implements DataHandler{
 	private String serialName;
 	private int buadrate;
 	private boolean isStop = false;
+	private boolean isDisconnected = false;
 	
 	public SerialDataHandler(String serialPort, int buadrate){
 		this.readBuffer = new RingBuffer<byte[]>(readBufferSize);
@@ -88,10 +89,19 @@ public class SerialDataHandler implements DataHandler{
 		@Override
 		public void run() {
 			while(!isStop) {
-				byte[] result=serial.read();
-				if(result != null) {
-					readBuffer.put(result);
+				byte[] result;
+				try {
+					result = serial.read();
+					if(result != null) {
+						readBuffer.put(result);
+					}
+				} catch (SerialPortDisconnectException e) {
+					String disconnectNotation = "\n\nSerial Port Disconnect!";
+					readBuffer.put(disconnectNotation.getBytes());
+					isDisconnected = true;
+					break;
 				}
+				
 			}
 		}
 		
@@ -102,7 +112,7 @@ public class SerialDataHandler implements DataHandler{
 
 		@Override
 		public void run() {
-			while(!isStop) {
+			while(!isStop&&!isDisconnected) {
 				byte[] content;
 				if((content=readBuffer.get())!=null) {
 					String line = rim(content);
@@ -116,6 +126,23 @@ public class SerialDataHandler implements DataHandler{
 					e.printStackTrace();
 				}
 			}
+			while(!readBuffer.isEmpty()) {
+				byte[] content;
+				if((content=readBuffer.get())!=null) {
+					String line = rim(content);
+					displayBuffer.put(line);
+					logBuffer.put(line);
+					serverBuffer.put(line);
+				}
+			}
+			while(!displayBuffer.isEmpty()) {
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			isStop = true;
 		}
 		
 		private String rim(byte[] content) {

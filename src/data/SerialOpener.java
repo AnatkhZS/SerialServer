@@ -42,13 +42,15 @@ public class SerialOpener {
 		ser.writeBytes(cmdArray, cmdArray.length);
 	}
 	
-	public byte[] read() {
+	public byte[] read() throws SerialPortDisconnectException {
 		byte[] readBuffer = new byte[1024];
 		int numRead = ser.readBytes(readBuffer, readBuffer.length);
 		if(numRead>0)
 			return java.util.Arrays.copyOf(readBuffer, numRead);
-		else
+		else if(numRead==0)
 			return null;
+		else
+			throw new SerialPortDisconnectException();
 	}
 	
 	public void close() {
@@ -56,3 +58,5 @@ public class SerialOpener {
 	}
 	
 }
+
+class SerialPortDisconnectException extends Exception{}
