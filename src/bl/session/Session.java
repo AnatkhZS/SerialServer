@@ -11,8 +11,9 @@ public class Session {
 	private boolean isStartAtMidnight;
 	private boolean isAppendToFile;
 	private DataHandler handler;
+	private int remoteId;
 	
-	public Session(int sessionId, String name, String logPath, boolean isRecord, boolean isStartAtMidnight, boolean isAppendToFile, DataHandler handler) {
+	public Session(int sessionId, String name, String logPath, boolean isRecord, boolean isStartAtMidnight, boolean isAppendToFile, DataHandler handler, int remoteId) {
 		this.sessionId = sessionId;
 		this.name = name;
 		this.logPath = logPath;
@@ -20,6 +21,7 @@ public class Session {
 		this.isStartAtMidnight = isStartAtMidnight;
 		this.isAppendToFile = isAppendToFile;
 		this.handler = handler;
+		this.remoteId = remoteId;
 		this.record();
 	}
 	
@@ -65,6 +67,10 @@ public class Session {
 	
 	public String getLogPath() {
 		return this.logPath;
+	}
+	
+	public int getRemoteId() {
+		return this.remoteId;
 	}
 	
 	public boolean isRecord() {

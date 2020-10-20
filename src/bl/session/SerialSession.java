@@ -6,8 +6,8 @@ public class SerialSession extends Session{
 	private String serialPort;
 	private int buadrate;
 	
-	public SerialSession(int sessionId, String serialPort, int buadrate, String logPath, boolean isRecord, boolean isStartAtMidnight, boolean isAppendToFile, SerialDataHandler handler) {
-		super(sessionId, serialPort, logPath, isRecord, isStartAtMidnight, isAppendToFile, handler);
+	public SerialSession(int sessionId, String serialPort, int buadrate, String logPath, boolean isRecord, boolean isStartAtMidnight, boolean isAppendToFile, SerialDataHandler handler, int remoteId) {
+		super(sessionId, serialPort, logPath, isRecord, isStartAtMidnight, isAppendToFile, handler, remoteId);
 		this.serialPort = serialPort;
 		this.buadrate = buadrate;
 	}

@@ -408,6 +408,7 @@ public class GUI {
 				int port = Integer.valueOf(portTextField.getText());
 				testbedClient = new TestbedClient(host, port);
 				testbedClient.start();
+				sessionManager.setTestbedClient(testbedClient);
 				new Thread(new Runnable() {
 					public void run() {
 						statusLabel.setText(formatString("connecting...", formatStringLength));
