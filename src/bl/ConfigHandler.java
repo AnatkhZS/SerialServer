@@ -15,16 +15,26 @@ public class ConfigHandler {
 	}
 	
 	private void init() {
-		try {
-			BufferedReader br = new BufferedReader(new FileReader(filename));
-			String data = "";
-			String str = null;
-			while((str=br.readLine())!=null)
-				data = data+str+"\n";
-			br.close();
-			root = new JSONObject(data);
-		} catch (IOException e) {
-			e.printStackTrace();
+		File configFile = new File(filename);
+		if(!configFile.exists()) {
+			try {
+				configFile.createNewFile();
+			} catch (IOException e) {}
+			String initData = "{\"SerialPorts\":{}}";
+			root = new JSONObject(initData);
+		}else {
+			try {
+				BufferedReader br = new BufferedReader(new FileReader(filename));
+				String data = "";
+				String str = null;
+				while((str=br.readLine())!=null)
+					data = data+str+"\n";
+				br.close();
+				root = new JSONObject(data);
+			} catch (IOException|org.json.JSONException e) {
+				String initData = "{\"SerialPorts\":{}}";
+				root = new JSONObject(initData);
+			}
 		}
 	}
 	
@@ -96,6 +106,14 @@ public class ConfigHandler {
 	}
 	
 	public void save() {
+		File configFile = new File(filename);
+		if(!configFile.exists()) {
+			try {
+				configFile.createNewFile();
+			} catch (IOException e) {
+				return;
+			}
+		}
 		String ws = root.toString();
 		try {
 			BufferedWriter bw = new BufferedWriter(new FileWriter(filename));
@@ -103,8 +121,7 @@ public class ConfigHandler {
 			bw.flush();
 			bw.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			return;
 		}
 	}
 }
