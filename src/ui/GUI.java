@@ -23,7 +23,6 @@ import javax.swing.event.DocumentListener;
 
 
 import bl.ConfigHandler;
-import bl.SerialServer;
 import bl.TestbedClient;
 import bl.session.SerialSession;
 import bl.session.Session;           
@@ -43,7 +42,6 @@ public class GUI {
 	private final String CONFIG_PATH = "config.json";
 	private String serverHost = "81.69.153.31";
 	private int serverPort = 9001;
-	private SerialServer serialServer;
 	private RecordTextArea inputTextArea;
 	private Session currentSession;
 	private ConfigHandler configHandler;
@@ -118,7 +116,6 @@ public class GUI {
 			public void windowClosing(WindowEvent e) {
 				try {
 					configHandler.save();
-					serialServer.destroyServer();
 				}catch(Exception e1) {}
 				System.exit(0);
 			}
