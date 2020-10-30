@@ -16,6 +16,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -538,13 +539,19 @@ public class GUI {
 		JButton openFileButton = new JButton("..");
 		openFileButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				FileDialog fileDialog = new FileDialog(connectionFrame);                 
-				fileDialog.setVisible(true);
-				String filePath = fileDialog.getDirectory();		
-				String fileName = fileDialog.getFile();		
-				if(filePath != null && fileName != null){			
-					logPathField.setText(filePath + fileName);
+				JFileChooser fc = new JFileChooser();
+				int select = fc.showSaveDialog(connectionFrame);
+//				FileDialog fileDialog = new FileDialog(connectionFrame);                 
+//				fileDialog.setVisible(true);
+				if(select == JFileChooser.APPROVE_OPTION) {
+					File file = fc.getSelectedFile();
+					logPathField.setText(file.getAbsolutePath());
 				}
+//				String filePath = fileDialog.getDirectory();		
+//				String fileName = fileDialog.getFile();		
+//				if(filePath != null && fileName != null){			
+//					logPathField.setText(filePath + fileName);
+//				}
 			}});
 
 		logSettingPanel.add(logLabel, "0, 0");
@@ -629,9 +636,9 @@ public class GUI {
 					}else if(isStartAtMidnight && !logPath.contains("%D")) {
 						JOptionPane.showMessageDialog(null, "Use %D in your log path!", "Attention", JOptionPane.ERROR_MESSAGE);
 					}else {
-						if(!logPath.equals("") && logPath!=null && !logPath.endsWith(".log")){
-							logPath = logPath+".log";
-						}
+//						if(!logPath.equals("") && logPath!=null && !logPath.endsWith(".log")){
+//							logPath = logPath+".log";
+//						}
 						if(!configHandler.contain(serialPort))
 							configHandler.addSerial(serialPort);
 						configHandler.setValue(serialPort, "name", serialPort);
