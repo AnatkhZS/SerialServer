@@ -23,17 +23,20 @@ public class LogRecorder {
 	}
 	
 	public File fileInit(String fileName) {
-		File logFile = new File(fileName);
-		if((!isAppendToFile) && logFile.exists())
-			logFile.delete();
-		if(!logFile.exists()) {
-			try {
-				logFile.createNewFile();
-			} catch (IOException e) {
-				e.printStackTrace();
+		if(fileName!="" && fileName!=null) {
+			File logFile = new File(fileName);
+			if((!isAppendToFile) && logFile.exists())
+				logFile.delete();
+			if(!logFile.exists()) {
+				try {
+					logFile.createNewFile();
+				} catch (IOException e) {
+					return null;
+				}
 			}
+			return logFile;
 		}
-		return logFile;
+		return null;
 	}
 	
 	public void startRecord() {
@@ -54,11 +57,12 @@ public class LogRecorder {
 
 		@Override
 		public void run() {
-			// TODO Auto-generated method stub
 			String date = getDate();
 			String monthStr = date.split("-")[0];
 			String dayStr = date.split("-")[1];
 			File logFile = fileInit(fileName.replace("%M", monthStr).replace("%D", dayStr));
+			if(logFile==null)
+				return;
 			try {
 				FileWriter writer = new FileWriter(logFile, true);
 				SimpleDateFormat dateFormat= new SimpleDateFormat("[HH:mm:ss.SSS]");
@@ -91,7 +95,6 @@ public class LogRecorder {
 				}
 				writer.close();
 			} catch (IOException | InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

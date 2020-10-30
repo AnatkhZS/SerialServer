@@ -496,6 +496,28 @@ public class GUI {
 	    serialSettingPanel.add(portLabel, "0, 0");
 		{
 			portBox = new JComboBox<String>(serialPortList);
+			String selectedItem = (String)portBox.getSelectedItem();
+			if(configHandler.contain(selectedItem)) {
+				int buadrate = (int)configHandler.query(selectedItem, "buadrate");
+				String logPath = (String)configHandler.query(selectedItem, "logPath");
+				boolean isRecord = (boolean)configHandler.query(selectedItem, "isRecord");
+				boolean isStartAtMidnight = (boolean)configHandler.query(selectedItem, "isStartAtMidnight");
+				boolean isAppendToFile = (boolean)configHandler.query(selectedItem, "isAppendToFile");
+				buadrateBox.setSelectedIndex(index(buadrateList, buadrate));
+				logPathField.setText(logPath);
+				startOnConnectCheckBox.setSelected(isRecord);
+				newLogAtMidnightCheckBox.setSelected(isStartAtMidnight);
+				if(isAppendToFile)
+					appendRadioButton.setSelected(true);
+				else
+					overwriteRadioButton.setSelected(true);
+			}else {
+				buadrateBox.setSelectedIndex(0);
+				logPathField.setText("");
+				startOnConnectCheckBox.setSelected(false);
+				newLogAtMidnightCheckBox.setSelected(false);
+				appendRadioButton.setSelected(true);
+			}
 			portBox.addItemListener(new ItemListener() {
 				@Override
 				public void itemStateChanged(ItemEvent e) {
