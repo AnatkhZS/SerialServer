@@ -101,4 +101,8 @@ public class Session {
 		this.isAppendToFile = isAppendToFile;
 	}
 	
+	public void setRemoteId(int remoteId) {
+		this.remoteId = remoteId;
+	}
+	
 }

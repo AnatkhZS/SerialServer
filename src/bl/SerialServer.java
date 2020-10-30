@@ -27,7 +27,6 @@ import java.net.Socket;
 import bl.session.Session;
 import bl.session.SessionManager;
 
-@SuppressWarnings("restriction")
 public class SerialServer {
 	private final int CMD_SERVER_PORT = 9428;
 	private final int DATA_SERVER_PORT = 9429;

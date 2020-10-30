@@ -52,7 +52,7 @@ public abstract class TabbedPane extends JLayeredPane {
 	public static final String MODE_SHOW_MORE_IN_POPUPMENU = "mode.show.in.popupmenu";
 
 	private JPanel contentPanel = new JPanel(new BorderLayout());
-	public List tabList = new ArrayList();
+	public List<Tab> tabList = new ArrayList<Tab>();
 	protected Map tabViewMap = new HashMap();
 	protected int tabHeight = 23;
 	protected int tabWidth = 120;
@@ -751,7 +751,14 @@ public abstract class TabbedPane extends JLayeredPane {
 	}
 
 	public Tab getTab(int index) {
-		return (Tab) tabList.get(index);
+		return tabList.get(index);
+	}
+	
+	public Tab getTabById(int id) {
+		for(Tab tab: tabList) {
+			if(tab.getId()==id) return tab;
+		}
+		return null;
 	}
 
 	public TabView getTabView(Tab tab) {

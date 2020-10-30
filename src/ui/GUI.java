@@ -41,6 +41,8 @@ import ui.tab.tab.TabbedPane;
 public class GUI {
 	private final int MAX_LINE_COUNT = 200;
 	private final String CONFIG_PATH = "config.json";
+	private String serverHost = "81.69.153.31";
+	private int serverPort = 9001;
 	private SerialServer serialServer;
 	private RecordTextArea inputTextArea;
 	private Session currentSession;
@@ -51,22 +53,23 @@ public class GUI {
 	private JButton optionsButton;
 	private JTextField logPathField = new JTextField();
 	private TabbedPane tabPane;
-	private JLabel statusLabel;
-	private JFrame mainFrame;
+	private JLabel statusLabel = new JLabel();
+	private JFrame mainFrame = new JFrame("SerialServer-Disconnected");
 	private JTextField hostTextField = null;
 	private JTextField portTextField = null;
 	private boolean needListenTestbedConnection = true;
 	private Thread testbedConnectionListener = null;
 	private int formatStringLength = 40;
-	private JButton connectButton = null;
-	private JButton disconnectButton = null;
+	private JButton connectButton = new JButton("Connect");
+	private JButton disconnectButton = new JButton("Disconnect");
+	private JFrame networkFrame = new JFrame("Network");
 	
 	private String serialPort;
 	private int buadrate;
 	private String logPath;
 	
 	private SessionManager sessionManager = SessionManager.getSessionManager();
-	private TestbedClient testbedClient;
+	private TestbedClient testbedClient = TestbedClient.getTestbecClient();
 	
 	public static void main(String args[]) {
 		new GUI().run();
@@ -76,20 +79,40 @@ public class GUI {
 		sessionManager.addListener(new SessionEventHandler() {
 			public void handle(SessionEvent e) {
 				setButtonStatus();
-				if(testbedClient!=null)
-					testbedClient.update();
+//				if(testbedClient!=null)
+//					testbedClient.update();
+				if(e.getType()==SessionManager.UPDATE_SESSION_EVENT) {
+					int sessionId = e.getSessionId();
+					Tab tab = tabPane.getTabById(sessionId);
+					Session session = sessionManager.getSession(sessionId);
+					tab.setTitle(getTabTitle(session));
+					tabPane.repaint();
+				}
 			}});
 		configHandler = new ConfigHandler(CONFIG_PATH);
-		serialServer = new SerialServer();
-		serialServer.createServer();
+//		serialServer = new SerialServer();
+//		serialServer.createServer();
+		testbedClient.init(serverHost, serverPort);
+		testbedClient.start();
+		sessionManager.setTestbedClient(testbedClient);
+		testbedConnectionListener = new Thread(new TestbedConnectionListener());
+		testbedConnectionListener.start();
 		GUICreator c = new GUICreator();
 		Thread guiThread = new Thread(c);
 		guiThread.start();
 	}
 	
+	private String getTabTitle(Session session) {
+		int remoteId = session.getRemoteId();
+		if(remoteId>=0) {
+			return session.getName()+"_"+session.getRemoteId();
+		}else {
+			return session.getName();
+		}
+	}
+	
 	private void createGUI() {
 //		JFrame.setDefaultLookAndFeelDecorated(true);
-		mainFrame = new JFrame("SerialServer-Disconnected");
 		mainFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		mainFrame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
@@ -111,7 +134,7 @@ public class GUI {
 		networkMenu.add(connectItem);
 		connectItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				createNetworkFrame();
+				networkFrame.setVisible(true);
 			}});
 		
 		JPanel panel = new JPanel();
@@ -163,10 +186,10 @@ public class GUI {
 		JPanel toolBoxPanel = new JPanel();
 		GridLayout toolBoxGrid = new GridLayout(1, 6);
 		toolBoxPanel.setLayout(toolBoxGrid);
-		JButton connectButton = new JButton("Connect");
+		JButton serialConnectButton = new JButton("Connect");
 		//set transparent
-		connectButton.setContentAreaFilled(false); 
-		connectButton.addMouseListener(new MouseListener() {
+		serialConnectButton.setContentAreaFilled(false); 
+		serialConnectButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
 				createConnectionFrame(true);
 			}
@@ -185,16 +208,17 @@ public class GUI {
 			public void mouseClicked(MouseEvent e) {
 				if(reConnectButton.isEnabled()) {
 					if(currentSession.isStop()) {
+						int preRemoteId = currentSession.getRemoteId();
 						String serialPort = ((SerialSession)currentSession).getSerialPort();
 						int buadrate = ((SerialSession)currentSession).getBuadrate();
 						String logPath = currentSession.getLogPath();
 						boolean isRecord = currentSession.isRecord();
 						boolean isStartAtMidnight = currentSession.isStartAtMidnight();
 						boolean isAppendToFile = currentSession.isAppendToFile();
-						tabPane.removeTab(serialPort);
+						tabPane.removeTab(getTabTitle(currentSession));
 						sessionManager.destroySession(currentSession.getSesionId());
 						
-						int sessionId = sessionManager.createSession(serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile);
+						int sessionId = sessionManager.createSession(serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile, preRemoteId);
 						SerialSession ss = (SerialSession)sessionManager.getSession(sessionId);
 						SwingUtilities.invokeLater(new SessionCreator(ss));
 						
@@ -234,7 +258,7 @@ public class GUI {
 			public void mouseEntered(MouseEvent e) {}
 			public void mouseExited(MouseEvent e) {}
 		});
-		toolBoxPanel.add(connectButton);
+		toolBoxPanel.add(serialConnectButton);
 		toolBoxPanel.add(reConnectButton);
 		toolBoxPanel.add(disConnectButton);
 		toolBoxPanel.add(optionsButton);
@@ -303,9 +327,8 @@ public class GUI {
 	}
 	
 	private void createNetworkFrame() {
-		JFrame networkFrame = new JFrame("Network");
 		networkFrame.setSize(480,180);
-		networkFrame.setVisible(true);
+//		networkFrame.setVisible(true);
 		networkFrame.setLocationRelativeTo(null);
 		double size[][] = {{TableLayout.FILL}, {0.8, 0.2}};
 		TableLayout networkFrameLayout = new TableLayout(size);
@@ -326,7 +349,6 @@ public class GUI {
 			infoPanel.add(statusLabel);
 		}
 		{
-			statusLabel = new JLabel();
 			infoConstraints.gridx=2;
 			infoConstraints.gridy=0;
 			infoConstraints.gridwidth=12;                                             
@@ -344,7 +366,7 @@ public class GUI {
 			infoPanel.add(hostLabel);
 		}
 		{
-			hostTextField = new JTextField("172.16.209.57");
+			hostTextField = new JTextField(serverHost);
 			infoConstraints.gridx=2;
 			infoConstraints.gridy=1;
 			infoConstraints.gridwidth=12;                                             
@@ -362,7 +384,7 @@ public class GUI {
 			infoPanel.add(portLabel);
 		}
 		{
-			portTextField = new JTextField("54321");
+			portTextField = new JTextField(""+serverPort);
 			infoConstraints.gridx=2;
 			infoConstraints.gridy=2;
 			infoConstraints.gridwidth=12;                                             
@@ -378,17 +400,17 @@ public class GUI {
 		JButton cancelButton = new JButton("Cancel");
 		cancelButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
-				networkFrame.dispose();
+//				networkFrame.dispose();
+				networkFrame.setVisible(false);
 			}
 			public void mousePressed(MouseEvent e) {}
 			public void mouseReleased(MouseEvent e) {}
 			public void mouseEntered(MouseEvent e) {} 
 			public void mouseExited(MouseEvent e) {}
 		});
-		disconnectButton = new JButton("Disconnect");
 		disconnectButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
-				testbedClient.disconnect();
+				testbedClient.disconnect("Disconnect");
 				needListenTestbedConnection = false;
 				try {
 					testbedConnectionListener.join();
@@ -401,14 +423,13 @@ public class GUI {
 			public void mouseEntered(MouseEvent e) {} 
 			public void mouseExited(MouseEvent e) {}
 		});
-		connectButton = new JButton("Connect");
 		connectButton.addMouseListener(new MouseListener() {
 			public void mouseClicked(MouseEvent e) {
-				String host = hostTextField.getText();
-				int port = Integer.valueOf(portTextField.getText());
-				testbedClient = new TestbedClient(host, port);
+				serverHost = hostTextField.getText();
+				serverPort = Integer.valueOf(portTextField.getText());
+				System.out.println("??????????????");
+				testbedClient.init(serverHost, serverPort);
 				testbedClient.start();
-				sessionManager.setTestbedClient(testbedClient);
 				new Thread(new Runnable() {
 					public void run() {
 						statusLabel.setText(formatString("connecting...", formatStringLength));
@@ -439,19 +460,24 @@ public class GUI {
 		connectionFrame.setVisible(true);
 //		connectionFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		connectionFrame.setLocationRelativeTo(null);
-		double size[][] = {{TableLayout.FILL}, {0.3, 0.4, 0.4}};
-		TableLayout mainTableLayout = new TableLayout(size);
+		TableLayout mainTableLayout = null;
+		if(isConnect) {
+			double size[][] = {{TableLayout.FILL}, {0.3, 0.4, 0.3}};
+			mainTableLayout = new TableLayout(size);
+		}else {
+			double size[][] = {{TableLayout.FILL}, {0.3, 0.4, 0.15, 0.3}};
+			mainTableLayout = new TableLayout(size);
+		}
 		connectionFrame.setLayout(mainTableLayout);
 
 		JPanel serialSettingPanel = new JPanel();
 		serialSettingPanel.setBorder(BorderFactory.createTitledBorder("Serial Setting"));
-		GridBagLayout serialSettingLayout = new GridBagLayout();
-		GridBagConstraints serialSettingConstraints = new GridBagConstraints();
-		serialSettingConstraints.fill=GridBagConstraints.BOTH;
-		serialSettingPanel.setLayout(serialSettingLayout);
+		double serialSettingSize[][] = {{0.2, 0.8}, {0.5, 0.5}};
+		TableLayout serialSettingTableLayout = new TableLayout(serialSettingSize);
+		serialSettingPanel.setLayout(serialSettingTableLayout);
 		JComboBox<String> portBox;
 		String[] serialPortList = SessionManager.getSerialPortList();
-		Integer[] buadrateList = {57600, 115200};
+		Integer[] buadrateList = {38400, 57600, 115200};
 		JComboBox<Integer> buadrateBox = new JComboBox<Integer>(buadrateList);
 		JCheckBox startOnConnectCheckBox = new JCheckBox("Start log upon connect");
 		JCheckBox newLogAtMidnightCheckBox = new JCheckBox("Start new log at midnight(use %D)");
@@ -462,15 +488,8 @@ public class GUI {
 		ButtonGroup buttonGroup = new ButtonGroup();
 		buttonGroup.add(overwriteRadioButton);
 		buttonGroup.add(appendRadioButton);
-		{
-			JLabel portLabel = new JLabel("Port:");
-			serialSettingConstraints.gridx=0;
-	        serialSettingConstraints.gridy=0;
-	        serialSettingConstraints.gridwidth=2;                                             
-	        serialSettingConstraints.gridheight=1;            
-	        serialSettingLayout.setConstraints(portLabel, serialSettingConstraints);
-	        serialSettingPanel.add(portLabel);
-		}
+		JLabel portLabel = new JLabel("Port:");
+	    serialSettingPanel.add(portLabel, "0, 0");
 		{
 			portBox = new JComboBox<String>(serialPortList);
 			portBox.addItemListener(new ItemListener() {
@@ -501,30 +520,11 @@ public class GUI {
 						}
 					}
 				}});
-			serialSettingConstraints.gridx=2;
-	        serialSettingConstraints.gridy=0;
-	        serialSettingConstraints.gridwidth=12;                                             
-	        serialSettingConstraints.gridheight=1;            
-	        serialSettingLayout.setConstraints(portBox, serialSettingConstraints);
-	        serialSettingPanel.add(portBox);
+	        serialSettingPanel.add(portBox, "1, 0");
 		}
-		{
-			JLabel buadrateLabel = new JLabel("Buadrate:");
-			serialSettingConstraints.gridx=0;
-	        serialSettingConstraints.gridy=1;
-	        serialSettingConstraints.gridwidth=2;                                             
-	        serialSettingConstraints.gridheight=1;            
-	        serialSettingLayout.setConstraints(buadrateLabel, serialSettingConstraints);
-	        serialSettingPanel.add(buadrateLabel);
-		}
-		{
-			serialSettingConstraints.gridx=2;
-	        serialSettingConstraints.gridy=1;
-	        serialSettingConstraints.gridwidth=12;                                             
-	        serialSettingConstraints.gridheight=1;            
-	        serialSettingLayout.setConstraints(buadrateBox, serialSettingConstraints);
-	        serialSettingPanel.add(buadrateBox);
-		}
+		JLabel buadrateLabel = new JLabel("Buadrate:");
+	    serialSettingPanel.add(buadrateLabel, "0, 1");
+	    serialSettingPanel.add(buadrateBox, "1, 1");
 
 		JPanel logSettingPanel = new JPanel();
 		logSettingPanel.setBorder(BorderFactory.createTitledBorder("Log Setting"));
@@ -539,8 +539,7 @@ public class GUI {
 				fileDialog.setVisible(true);
 				String filePath = fileDialog.getDirectory();		
 				String fileName = fileDialog.getFile();		
-				if(filePath == null  || fileName == null){			
-				}else{
+				if(filePath != null && fileName != null){			
 					logPathField.setText(filePath + fileName);
 				}
 			}});
@@ -552,10 +551,35 @@ public class GUI {
 		logSettingPanel.add(overwriteRadioButton, "3, 1, 4, 1");
 		logSettingPanel.add(newLogAtMidnightCheckBox, "0, 2, 2, 2");
 		logSettingPanel.add(appendRadioButton, "3, 2, 4, 2");
+		JPanel infoPanel = null;
+		if(!isConnect) {
+			infoPanel = new JPanel();
+			infoPanel.setBorder(BorderFactory.createTitledBorder("Info"));
+			double infoSize[][] = {{0.2, 0.8}, {TableLayout.FILL}};
+			TableLayout infoTableLayout = new TableLayout(infoSize);
+			infoPanel.setLayout(infoTableLayout);
+			JLabel remoteIdLabel = new JLabel("Remote id:");
+			int remoteId = currentSession.getRemoteId();
+			String remoteIdStr = "";
+			if(remoteId>=0) {
+				remoteIdStr = ""+remoteId;
+			}else {
+				remoteIdStr = "no remote id";
+			}
+			JLabel remoteIdValueLabel = new JLabel(remoteIdStr);
+			infoPanel.add(remoteIdLabel, "0, 0");
+			infoPanel.add(remoteIdValueLabel, "1, 0");
+		}
 		
 		JPanel confirmPanel = new JPanel();
-		double size3[][] = {{0.2, 0.2, 0.2, 0.2, 0.2}, {TableLayout.FILL, 0.3, 0.3, 0.3}};
-		TableLayout comfirmTableLayout = new TableLayout(size3);
+		TableLayout comfirmTableLayout = null;
+		if(isConnect) {
+			double size3[][] = {{0.2, 0.2, 0.2, 0.2, 0.2}, {0.3, 0.3, 0.3}};
+			comfirmTableLayout = new TableLayout(size3);
+		}else {
+			double size3[][] = {{0.2, 0.2, 0.2, 0.2, 0.2}, {0.1, 0.3, 0.6}};
+			comfirmTableLayout = new TableLayout(size3);
+		}
 		confirmPanel.setLayout(comfirmTableLayout);
 		
 		if(!isConnect) {
@@ -614,7 +638,7 @@ public class GUI {
 						configHandler.setValue(serialPort, "isStartAtMidnight", isStartAtMidnight);
 						configHandler.setValue(serialPort, "isAppendToFile", isAppendToFile);
 						connectionFrame.dispose();
-						int sessionId = sessionManager.createSession(serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile);
+						int sessionId = sessionManager.createSession(serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile, -1);
 						SerialSession ss = (SerialSession)sessionManager.getSession(sessionId);
 						SwingUtilities.invokeLater(new SessionCreator(ss));
 					}
@@ -624,12 +648,13 @@ public class GUI {
 					}else if(isStartAtMidnight && !logPath.contains("%D")) {
 						JOptionPane.showMessageDialog(null, "Use %D in your log path!", "Attention", JOptionPane.ERROR_MESSAGE);
 					}else {
-						String currentSerialPort = currentSession.getName();
 						int currentSessionId = currentSession.getSesionId();
+						int preRemoteId = currentSession.getRemoteId();
 						sessionManager.getSession(currentSessionId).setStop();
 						sessionManager.destroySession(currentSessionId);
 						//TODO remove ui
-						tabPane.removeTab(currentSerialPort);
+						tabPane.removeTab(getTabTitle(currentSession));
+//						tabPane.repaint();
 						if(!logPath.equals("") && logPath!=null && !logPath.endsWith(".log")){
 							logPath = logPath+".log";
 						}
@@ -642,7 +667,7 @@ public class GUI {
 						configHandler.setValue(serialPort, "isStartAtMidnight", isStartAtMidnight);
 						configHandler.setValue(serialPort, "isAppendToFile", isAppendToFile);
 						connectionFrame.dispose();
-						int sessionId = sessionManager.createSession(serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile);
+						int sessionId = sessionManager.createSession(serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile, preRemoteId);
 						SerialSession ss = (SerialSession)sessionManager.getSession(sessionId);
 						SwingUtilities.invokeLater(new SessionCreator(ss));
 					}
@@ -653,12 +678,23 @@ public class GUI {
 			public void mouseEntered(MouseEvent e) {}
 			public void mouseExited(MouseEvent e) {}
 		});
-		confirmPanel.add(cancelButton, "3, 2");
-		confirmPanel.add(confirmButton, "4, 2");
+		if(isConnect) {
+			confirmPanel.add(cancelButton, "3, 2");
+			confirmPanel.add(confirmButton, "4, 2");
+		}else {
+			confirmPanel.add(cancelButton, "3, 1");
+			confirmPanel.add(confirmButton, "4, 1");
+		}
+		
 		
         connectionFrame.add(serialSettingPanel, "0, 0");
         connectionFrame.add(logSettingPanel, "0, 1");
-        connectionFrame.add(confirmPanel, "0, 2");
+        if(isConnect) {
+        	connectionFrame.add(confirmPanel, "0, 2");
+        }else {
+        	connectionFrame.add(infoPanel, "0, 2");
+        	connectionFrame.add(confirmPanel, "0, 3");
+        }
 	}
 	
 	private int index(Object[] lst, Object value) {
@@ -674,6 +710,7 @@ public class GUI {
 
 		@Override
 		public void run() {
+			createNetworkFrame();
 			createGUI();
 		}
 		
@@ -769,7 +806,7 @@ public class GUI {
 				public void mouseExited(MouseEvent e) {}
 			});
 			
-			Tab tab = new Tab(showScrollPane, true, null, serialSession.getSesionId(), serialSession.getSerialPort());
+			Tab tab = new Tab(showScrollPane, true, null, serialSession.getSesionId(), getTabTitle(serialSession));
 			tab.addListener(new MyHandler() {
 				public void removeTab(RemoveTabEvent e) {
 					int sessionId = e.getSessionId();

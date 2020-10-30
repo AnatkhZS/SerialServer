@@ -12,6 +12,9 @@ import bl.TestbedClient;
 import data.SerialDataHandler;
 
 public class SessionManager {
+	public final static int CREATE_SESSION_EVENT = 0;
+	public final static int DESTROY_SESSION_EVENT = 1;
+	public final static int UPDATE_SESSION_EVENT = 2;
 	private static SessionManager manager = new SessionManager();
 	private int currentSessionId = 0;
 	private TestbedClient testbedClient = null;
@@ -52,23 +55,71 @@ public class SessionManager {
 			h.handle(e);
 	}
 	
-	public int createSession(String serialPort, int buadrate, String logPath, boolean isRecord, boolean isStartAtMidnight, boolean isAppendToFile) {
-		int remoteId = -1;
-		if(isTestbedClientConnected()) {
-			int[] historyIdList = new int[1];
-			int[] remoteIdList = testbedClient.requestRemoteId(1, historyIdList);
-			remoteId = remoteIdList[0];
+	public class UpdateRemoteIdThread implements Runnable{
+		private int sessionId;
+		public UpdateRemoteIdThread(int sessionId) {
+			this.sessionId = sessionId;
 		}
-		SerialDataHandler handler = new SerialDataHandler(serialPort, buadrate);
-		SerialSession ss = new SerialSession(currentSessionId, serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile, handler, remoteId);
-		sessionMap.put(currentSessionId, ss);
-		this.trigger(new SessionEvent(this, 0));
+
+		@Override
+		public void run() {
+			if(isTestbedClientConnected()) {
+				if(this.sessionId>=0) {
+					int[] historyRemoteIdList = {-1};
+					List<Integer> remoteIdList = testbedClient.requestRemoteId(1, historyRemoteIdList);
+					if(remoteIdList!=null) {
+						getSession(this.sessionId).setRemoteId(remoteIdList.get(0));
+						trigger(new SessionEvent(this, UPDATE_SESSION_EVENT, this.sessionId));
+					}
+				}else {
+					Set<Integer> currentSessionList;
+					Integer[] currentRemoteIdList;
+					synchronized(manager) {
+						currentSessionList = getSessionList();
+						currentRemoteIdList = getRemoteIdList();
+					}
+					List<Integer> remoteIdList = testbedClient.requestRemoteId(currentSessionList.size(), currentRemoteIdList);
+					if(remoteIdList!=null) {
+						List<Integer> noRemoteIdSessionList = new ArrayList<Integer>();
+						for(Integer sessionId:currentSessionList) {
+							Integer preRemoteId = getSession(sessionId).getRemoteId();
+							if(remoteIdList.contains(preRemoteId)) {
+								remoteIdList.remove(preRemoteId);
+							}else {
+								noRemoteIdSessionList.add(sessionId);
+							}
+						}
+						System.out.println("Remote id list size: "+remoteIdList.size());
+						for(int i=0;i<remoteIdList.size();i++) {
+							int sessionId = noRemoteIdSessionList.get(i);
+							getSession(sessionId).setRemoteId(remoteIdList.get(i));
+							trigger(new SessionEvent(this, UPDATE_SESSION_EVENT, sessionId));
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	public int createSession(String serialPort, int buadrate, String logPath, boolean isRecord, boolean isStartAtMidnight, boolean isAppendToFile, int remoteId) {
+		synchronized(manager) {
+			SerialDataHandler handler = new SerialDataHandler(serialPort, buadrate);
+			SerialSession ss = new SerialSession(currentSessionId, serialPort, buadrate, logPath, isRecord, isStartAtMidnight, isAppendToFile, handler, remoteId);
+			sessionMap.put(currentSessionId, ss);
+			this.trigger(new SessionEvent(this, CREATE_SESSION_EVENT, currentSessionId));
+		}
+		if(remoteId<0) {
+			Thread updateRemoteIdThread = new Thread(new UpdateRemoteIdThread(currentSessionId));
+			updateRemoteIdThread.start();
+		}
 		return currentSessionId++;
 	}
 	
 	public boolean destroySession(int id) {
-		sessionMap.remove(id);
-		this.trigger(new SessionEvent(this, 1));
+		synchronized(manager) {
+			sessionMap.remove(id);
+			this.trigger(new SessionEvent(this, DESTROY_SESSION_EVENT, id));
+		}
 		return true;
 	}
 	
@@ -99,6 +150,14 @@ public class SessionManager {
 	public int getSessionId(String name) {
 		for(Session s:sessionMap.values()) {
 			if(s.getName().equals(name))
+				return s.getSesionId();
+		}
+		return -1;
+	}
+	
+	public int getSessionId(int remoteId) {
+		for(Session s:sessionMap.values()) {
+			if(s.getRemoteId()==remoteId)
 				return s.getSesionId();
 		}
 		return -1;
@@ -156,7 +215,7 @@ public class SessionManager {
         return toArray(result, String.class);
 	}
 	
-	private Integer[] getRemoteIdList() {
+	public Integer[] getRemoteIdList() {
 		List<Integer> remoteIdList = new ArrayList<Integer>();
 		for(Session s: sessionMap.values()) {
 			int remoteId = s.getRemoteId();
