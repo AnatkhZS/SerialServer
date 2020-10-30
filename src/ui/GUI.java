@@ -260,17 +260,24 @@ public class GUI {
 		toolBoxPanel.add(disConnectButton);
 		toolBoxPanel.add(optionsButton);
 		
-		JSplitPane mainPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, toolBoxPanel, splitPane);
-		mainPane.setDividerSize(3);
+//		JSplitPane mainPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, toolBoxPanel, splitPane);
+//		mainPane.setDividerSize(3);
 		
 		panel.setLayout(new BorderLayout());
-		panel.add(mainPane);
+//		panel.add(mainPane);
+		
+		double layoutSize[][] = {{TableLayout.FILL}, {0.1, 0.9}};
+		TableLayout panelTableLayout = new TableLayout(layoutSize);
+		panel.setLayout(panelTableLayout);
+		panel.add(toolBoxPanel, "0, 0");
+		panel.add(splitPane, "0, 1");
+//		panel.add(inputScrollPane, "0, 2");
 		
 		mainFrame.add(panel);
 		mainFrame.setVisible(true);
 		
 		splitPane.setDividerLocation(0.7);
-		mainPane.setDividerLocation(0.1);
+//		mainPane.setDividerLocation(0.1);
 	}
 	
 	private void setButtonStatus() {
@@ -424,7 +431,6 @@ public class GUI {
 			public void mouseClicked(MouseEvent e) {
 				serverHost = hostTextField.getText();
 				serverPort = Integer.valueOf(portTextField.getText());
-				System.out.println("??????????????");
 				testbedClient.init(serverHost, serverPort);
 				testbedClient.start();
 				new Thread(new Runnable() {
