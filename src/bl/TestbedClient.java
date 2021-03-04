@@ -1,5 +1,10 @@
 package bl;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -11,8 +16,10 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Formatter;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -20,12 +27,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import bl.session.Session;
 import bl.session.SessionManager;
+import data.DataHandler;
 
 public class TestbedClient {
 	private String host;
@@ -33,6 +42,9 @@ public class TestbedClient {
 	private boolean isConnected;
 	private int requestId = 0;
 	private long updateTime = 0;
+	private String bufferLogName = "buffer.log";
+	private Map<Integer, Recorder> recorderMap = new HashMap<>();
+	private final LinkedBlockingQueue<String> stopMessageQueue = new LinkedBlockingQueue<>();
 	private Selector selector;
 	private SocketChannel clientSocketChannel;
 	private SelectionKey selectionKey;
@@ -213,6 +225,23 @@ public class TestbedClient {
 	                        		synchronized(messageMap) {
 	                        			messageMap.put(requestId, remoteIdList);
 	                        		}
+	                        	}else if(action.equals("startRecord")) {
+	                        		int remoteId = bodyDict.getInt("remoteId");
+	                        		int sessionId = sessionManager.getSessionId(remoteId);
+	                        		Session session = sessionManager.getSession(sessionId);
+	                        		Recorder recorder = new Recorder(session, getLogFileName(remoteId));
+	                        		recorderMap.put(remoteId, recorder);
+	                        		Thread thread = new Thread(recorder);
+	                        		thread.start();
+	                        	}else if(action.equals("stopRecord")){
+	                        		int remoteId = bodyDict.getInt("remoteId");
+	                        		if(recorderMap.containsKey(remoteId)) {
+	                        			recorderMap.get(remoteId).stopRecord();
+	                        			//remove item
+		                        		recorderMap.remove(remoteId);
+		                        		//upload log file
+		                        		uploadLogFile(remoteId);
+	                        		}
 	                        	}else if(action.equals("keepAlive")) {
 	                        		updateTime();
 	                        	}
@@ -271,7 +300,9 @@ public class TestbedClient {
 		synchronized(clientSocketChannel) {
 			ByteBuffer writeBuffer = ByteBuffer.wrap(content);
 			try {
-				clientSocketChannel.write(writeBuffer);
+				while(writeBuffer.hasRemaining()) {
+					clientSocketChannel.write(writeBuffer);
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -285,6 +316,10 @@ public class TestbedClient {
 		System.arraycopy(header, 0, request, preHeader.length, header.length);
 		System.arraycopy(body, 0, request, preHeader.length+header.length, body.length);
 		return request;
+	}
+	
+	private String getLogFileName(int remoteId) {
+		return remoteId+" "+bufferLogName;
 	}
 	
 	private int getRequestId() {
@@ -317,7 +352,7 @@ public class TestbedClient {
 		header.put("content-type", "json");
 		header.put("action", action);
 		header.put("requestId", requestId);
-		System.out.println("Request: "+header.toString()+new String(body));
+		System.out.println("Request: "+header.toString());
 		byte[] headerBytes = header.toString().getBytes();
 		int headerLength = headerBytes.length;
 		byte[] preHeader = new byte[2];
@@ -340,6 +375,23 @@ public class TestbedClient {
 		sendRequest(request.toString().getBytes(), "update", getRequestId());
 	}
 	
+	public void uploadLogFile(int remoteId) {
+		String filePath = getLogFileName(remoteId);
+		JSONObject request = new JSONObject();
+		request.put("remoteId", remoteId);
+		byte[] buf = null;
+		try {
+			FileInputStream fis=new FileInputStream(filePath);
+			buf =new byte[fis.available()];//fis.available()方法是读取文件中的所有内容的字节长度
+			fis.read(buf);
+			fis.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		request.put("content", buf);
+		sendRequest(request.toString().getBytes(), "uploadLogFile", getRequestId());
+	}
+	
 	public List<Integer> requestRemoteId(int count, int[] historyRemoteIdList) {
 		JSONObject request = new JSONObject();
 		request.put("count", count);
@@ -354,6 +406,7 @@ public class TestbedClient {
 				return remoteIdList;
 			}else {
 				// to deal with
+				return null;
 			}
 		}
 		return null;
@@ -420,6 +473,71 @@ public class TestbedClient {
 				}
 			}
 		}
+	}
+	
+	private class Recorder implements Runnable{
+		private Session session;
+		private boolean isStop = false;
+		private String fileName;
+		
+		public Recorder(Session session, String fileName) {
+			this.session = session;
+			this.fileName = fileName;
+		}
+		
+		public void stopRecord() {
+			this.isStop = true;
+		}
+
+		@Override
+		public void run() {
+			File logFile = fileInit(fileName);
+			if(logFile==null)
+				return;
+			try {
+				FileWriter writer = new FileWriter(logFile, true);
+				SimpleDateFormat dateFormat= new SimpleDateFormat("[HH:mm:ss.SSS]");
+				boolean isEndLine = true;
+				while(!session.isStop() && !this.isStop) {
+					String lines = session.readLine(DataHandler.NETWORK_READER);
+					if(lines!=null) {
+						String[] lineArray = lines.split("\r\n|\r|\n");
+						for(int i=0;i<lineArray.length;i++) {
+							if(i==0 && !isEndLine) {
+								writer.write(lineArray[i]+"\r\n");
+							}else {
+								writer.write(dateFormat.format(new Date())+lineArray[i]+"\r\n");
+							}
+						}
+						isEndLine = lines.endsWith("\n");
+						writer.flush();
+					}
+					Thread.sleep(10);
+				}
+				System.out.println("Recorder stopped");
+				writer.close();
+			} catch (IOException | InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		
+	}
+	
+	public File fileInit(String fileName) {
+		if(fileName!="" && fileName!=null) {
+			File logFile = new File(fileName);
+			if(logFile.exists())
+				logFile.delete();
+			if(!logFile.exists()) {
+				try {
+					logFile.createNewFile();
+				} catch (IOException e) {
+					return null;
+				}
+			}
+			return logFile;
+		}
+		return null;
 	}
 	
 	public static void main(String[] args) {

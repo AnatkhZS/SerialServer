@@ -8,6 +8,7 @@ import java.util.Calendar;
 import java.util.Date;
 
 import bl.session.Session;
+import data.DataHandler;
 
 public class LogRecorder {
 	private Session session;
@@ -66,6 +67,8 @@ public class LogRecorder {
 			try {
 				FileWriter writer = new FileWriter(logFile, true);
 				SimpleDateFormat dateFormat= new SimpleDateFormat("[HH:mm:ss.SSS]");
+				boolean isEndLine = true;
+				int count = 0;
 				while(!session.isStop()) {
 					if(isStartAtMidnight) {
 						String currenDate;
@@ -77,10 +80,9 @@ public class LogRecorder {
 							writer = new FileWriter(logFile, true);
 						}
 					}
-					String lines = session.readLine(1);
+					String lines = session.readLine(DataHandler.LOG_FILE_READER);
 					if(lines!=null) {
-						boolean isEndLine = true;
-						String[] lineArray = lines.split("\r\n");
+						String[] lineArray = lines.split("\r\n|\r|\n");
 						for(int i=0;i<lineArray.length;i++) {
 							if(i==0 && !isEndLine) {
 								writer.write(lineArray[i]+"\r\n");

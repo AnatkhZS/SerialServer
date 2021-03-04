@@ -22,7 +22,7 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-
+import data.DataHandler;
 import bl.ConfigHandler;
 import bl.TestbedClient;
 import bl.session.SerialSession;
@@ -787,7 +787,7 @@ public class GUI {
 				}});
 			while(true) {
 				if(!serialSession.isStop()) {
-					String line = serialSession.readLine(0);
+					String line = serialSession.readLine(DataHandler.UI_READER);
 					if(line!=null) {
 						showTextArea.append(line);
 						if(!isScrollBarClicked)

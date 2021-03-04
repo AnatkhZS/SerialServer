@@ -68,11 +68,11 @@ public class SerialDataHandler implements DataHandler{
 	
 	public String readLine(int type){
 		switch(type){
-		case 0:
+		case UI_READER:
 			return displayBuffer.get();
-		case 1:
+		case LOG_FILE_READER:
 			return logBuffer.get();
-		case 2:
+		case NETWORK_READER:
 			return serverBuffer.get();
 		default:
 			return null;
@@ -88,10 +88,15 @@ public class SerialDataHandler implements DataHandler{
 
 		@Override
 		public void run() {
+			boolean isFirstRead = true;
 			while(!isStop) {
 				byte[] result;
 				try {
 					result = serial.read();
+					if(isFirstRead) {  //首次读取数据可能会乱码
+						isFirstRead = false;
+						continue;
+					}
 					if(result != null) {
 						readBuffer.put(result);
 					}
